@@ -243,12 +243,11 @@
 
       // Display and then allow user to download via the Download button. Also attempt auto-download using a safe flow.
       displayReport(results);
-      // Attempt auto-download (no document.write usage)
+      // Attempt auto-download — safe (no document.write)
       const empcodeSafe = (results[0].empcode || 'attendance').replace(/\s+/g,'_');
       const empnameSafe = (results[0].empname || 'report').replace(/\s+/g,'_');
       const filename = `${empcodeSafe}_${empnameSafe}_${new Date().toISOString().slice(0,10)}.jpg`;
 
-      // Try auto-download — will not write into a popup using document.write; instead we use object URL delivery or open new tab.
       try {
         await autoDownloadReportSafe(document.getElementById('reportSection'), filename);
       } catch (e) {
@@ -292,9 +291,6 @@
     }
 
     // ---------- SAFE auto-download implementation (NO document.write into popup) ----------
-    // - If platform is iOS Safari: open image data URL in new tab (user long-press to save).
-    // - Otherwise: create blob -> object URL -> anchor.download and click it (works in Chrome/Firefox/Android).
-    // This function intentionally avoids writing HTML into any opened window.
     async function autoDownloadReportSafe(element, filename) {
       const overlay = document.getElementById('downloadOverlay');
       const overlayText = document.getElementById('downloadOverlayText');
@@ -305,7 +301,7 @@
         const scale = Math.min(window.devicePixelRatio || 2, 3);
         const canvas = await html2canvas(element, { scale: scale, useCORS: true, allowTaint: true, logging:false });
 
-        // iOS Safari: open data URL in new tab (download attribute ignored there)
+        // iOS Safari: open data URL in new tab (user long-press to save)
         if (isIOS() && isSafari()) {
           const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
           const newWin = window.open();
@@ -322,7 +318,7 @@
           }
         }
 
-        // Other browsers: blob + anchor.download
+        // Other browsers (Chrome/Firefox/Android): blob + anchor.download
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
         if (!blob) throw new Error('Failed to create blob');
 
@@ -367,11 +363,11 @@
       }
     }
 
-    // Manual download button: user gesture -> open a tab first (so popup blockers are less likely) then use safe flow.
+    // Manual download button: user gesture enables download in most browsers
     document.getElementById('downloadBtn').addEventListener('click', function() {
       const empInfo = (document.getElementById('empInfo').textContent||'attendance').replace(/\s+/g,'_').replace(/[^\w\-_.]/g,'');
       const filename = `${empInfo}_${new Date().toISOString().slice(0,10)}.jpg`;
-      // Try direct safe download flow (click is user gesture so anchor.download should work)
+      // run safe download flow
       autoDownloadReportSafe(document.getElementById('reportSection'), filename);
     });
 
