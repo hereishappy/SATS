@@ -9,7 +9,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5wZ3zXq4+ZbJgXn1xvB2p1mS2k3gQYwX3qz2m1y1q9/0+UoI8V2zKp1cw5wX1R3lD7k1O4wzI7Yt9G1mBg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <style>
-    /* (styles identical to previous file - kept compact here for brevity) */
     body{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100%;color:#333}
     .container{width:100%;max-width:480px;margin:0 auto;padding:20px;min-height:100%}
     .header{background:#fff;border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1);text-align:center}
@@ -17,7 +16,7 @@
     .search-section,.report-section,.grievance-section{background:#fff;border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1)}
     .search-group{margin-bottom:16px}
     .search-group label{display:block;margin-bottom:8px;font-size:14px;color:#666;font-weight:500}
-    input[type="text"], input[type="date"], input[type="url"], textarea{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px}
+    input[type="text"], input[type="date"], textarea{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px}
     .btn{width:100%;padding:14px;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;margin-bottom:12px}
     .btn-primary{background:#667eea;color:#fff}
     .btn-info{background:#17a2b8;color:#fff}
@@ -41,9 +40,10 @@
 
     <div class="search-section" id="searchSection">
       <h2>Search Attendance</h2>
+
+      <!-- Removed display of the actual web app URL per request -->
       <div class="data-source-info" id="dataSourceInfo">🌐 Data Source: Google Apps Script Web App</div>
 
-      <!-- EMP code input -->
       <div class="search-group">
         <label for="empcode" id="search-label">Enter Employee Code</label>
         <input type="text" id="empcode" placeholder="e.g., EMP001" autocomplete="off"/>
@@ -121,21 +121,14 @@
      */
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec"; // <-- REPLACE with your web app URL
 
-    // local cache
     let externalDataCache = [];
 
-    // UI helpers
     function showMessage(type, text, targetId = null) {
-      const id = targetId || 'message';
-      const parentEl = document.getElementById(id);
-      if (parentEl) {
-        parentEl.className = `message ${type}`;
-        parentEl.textContent = text;
-        parentEl.style.display = 'block';
-        setTimeout(()=> parentEl.style.display = 'none', 5000);
-        return;
+      const id = targetId || null;
+      if (id) {
+        const el = document.getElementById(id);
+        if (el) { el.className = `message ${type}`; el.textContent = text; el.style.display = 'block'; setTimeout(()=> el.style.display='none',5000); return; }
       }
-      // fallback: inline in search section
       const existing = document.querySelector('.search-section .message');
       if (existing) existing.remove();
       const msg = document.createElement('div');
@@ -147,7 +140,6 @@
       setTimeout(()=> msg.remove(), 5000);
     }
 
-    // Fetch all attendance from web app (?action=all)
     async function fetchAllFromWebApp() {
       if (!WEB_APP_URL || WEB_APP_URL.includes('AKfy...')) {
         showMessage('error', 'WEB_APP_URL not configured. Edit the index.html constant WEB_APP_URL and set it to your Apps Script Web App URL.');
@@ -160,7 +152,6 @@
       btn.textContent = 'Fetching...';
 
       try {
-        // Try CORS fetch
         const res = await fetch(`${WEB_APP_URL}?action=all`);
         if (res.ok) {
           const payload = await res.json();
@@ -170,7 +161,6 @@
         }
         throw new Error('Non-OK response, trying JSONP fallback');
       } catch (err) {
-        // JSONP fallback
         try {
           await new Promise((resolve, reject) => {
             const cb = 'cb_' + Date.now();
@@ -179,10 +169,7 @@
                 externalDataCache = response && response.data ? response.data : (Array.isArray(response) ? response : []);
                 showMessage('success', `Fetched ${externalDataCache.length} records via JSONP.`);
                 resolve();
-              } catch (e) { reject(e); } finally {
-                delete window[cb];
-                const s = document.getElementById(cb + '_script'); if (s) s.remove();
-              }
+              } catch (e) { reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
             };
             const script = document.createElement('script');
             script.id = cb + '_script';
@@ -199,7 +186,6 @@
       }
     }
 
-    // Search by empcode (combining cache only; if cache empty, try employee endpoint)
     document.getElementById('searchBtn').addEventListener('click', async () => {
       const empcode = (document.getElementById('empcode').value || '').trim().toUpperCase();
       if (!empcode) { showMessage('error', 'Please enter an employee code'); return; }
@@ -209,10 +195,8 @@
       btn.disabled = true;
       btn.textContent = 'Searching...';
 
-      // First search local cache
       let results = (externalDataCache || []).filter(r => (r.empcode || '').toString().toUpperCase() === empcode);
 
-      // If no results and WEB_APP_URL configured, try server endpoint ?action=employee&empcode=
       if ((!results || results.length === 0) && WEB_APP_URL && !WEB_APP_URL.includes('AKfy...')) {
         try {
           const res = await fetch(`${WEB_APP_URL}?action=employee&empcode=${encodeURIComponent(empcode)}`);
@@ -220,18 +204,13 @@
             const payload = await res.json();
             results = payload.data || (Array.isArray(payload) ? payload : []);
           } else {
-            // JSONP fallback for single employee
             await new Promise((resolve, reject) => {
               const cb = 'cb_emp_' + Date.now();
               window[cb] = function(response) {
                 try {
                   const data = response && response.data ? response.data : (Array.isArray(response) ? response : []);
-                  results = data;
-                  resolve();
-                } catch (e) { reject(e); } finally {
-                  delete window[cb];
-                  const s = document.getElementById(cb + '_script'); if (s) s.remove();
-                }
+                  results = data; resolve();
+                } catch (e) { reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
               };
               const script = document.createElement('script');
               script.id = cb + '_script';
@@ -240,10 +219,7 @@
               document.head.appendChild(script);
             });
           }
-        } catch (e) {
-          // ignore - will show "no records" below
-          console.warn('employee fetch error', e);
-        }
+        } catch (e) { console.warn('employee fetch error', e); }
       }
 
       btn.disabled = false;
@@ -257,7 +233,6 @@
       displayReport(results);
     });
 
-    // Display report (no auto-download). Download is manual via downloadBtn.
     function displayReport(records) {
       document.getElementById('searchSection').style.display = 'none';
       document.getElementById('reportSection').style.display = 'block';
@@ -296,9 +271,16 @@
                 </div>`;
       }).join('');
       document.getElementById('attendanceList').innerHTML = listHtml;
+
+      // Improve auto-download:
+      // - Try to auto-generate & download the JPG.
+      // - If download is blocked or fails, fallback to opening the image in a new tab and show a helpful message.
+      // - Keep the manual Download button available.
+      setTimeout(() => {
+        autoDownloadReport(`${empcode || 'attendance'}_${(empname||'').replace(/\s+/g,'_') || ''}_${new Date().toISOString().slice(0,10)}.jpg`);
+      }, 700);
     }
 
-    // calculate OT (standard 12 hour shift)
     function calculateOT(inTime, outTime) {
       if (!inTime || !outTime) return 0;
       const [inH, inM] = (inTime.split(':').map(Number));
@@ -311,28 +293,60 @@
       return Math.max(0, hours - 12);
     }
 
-    // Download button: capture the reportSection and trigger JPG download
-    document.getElementById('downloadBtn').addEventListener('click', async () => {
+    async function autoDownloadReport(filename) {
       const reportEl = document.getElementById('reportSection');
       try {
-        const canvas = await html2canvas(reportEl, { scale: 2, useCORS: true });
-        canvas.toBlob(function(blob) {
-          if (!blob) { showMessage('error', 'Failed to generate image'); return; }
-          const empInfoText = (document.getElementById('empInfo').textContent || '').replace(/\s+/g, '_');
-          const filename = `${empInfoText || 'attendance_report'}_${new Date().toISOString().slice(0,10)}.jpg`;
+        const canvas = await html2canvas(reportEl, { scale: 2, useCORS: true, logging: false });
+        // primary attempt: blob + anchor click (works in most Android/Chrome & modern browsers)
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        if (blob) {
           const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
+          const url = URL.createObjectURL(blob);
+          link.href = url;
           link.download = filename;
+          // Append and click to trigger download
           document.body.appendChild(link);
           link.click();
-          setTimeout(()=> { URL.revokeObjectURL(link.href); link.remove(); }, 1500);
-        }, 'image/jpeg', 0.9);
+          // Clean up
+          setTimeout(() => { URL.revokeObjectURL(url); link.remove(); }, 1500);
+          showMessage('success', 'Report download started. If it did not start automatically, tap Download Report (JPG).');
+          return true;
+        }
+        throw new Error('Could not create blob from canvas');
+      } catch (err) {
+        // fallback: open image in new tab so user can save manually (works on iOS Safari)
+        try {
+          const canvas = await html2canvas(reportEl, { scale: 1.5, useCORS: true, logging: false });
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          const w = window.open();
+          if (w) {
+            w.document.write(`<title>Attendance Report</title><img src="${dataUrl}" style="max-width:100%;height:auto;display:block;margin:0 auto"/>`);
+            w.document.close();
+            showMessage('success', 'Report opened in a new tab. Long-press the image to save it to your device.');
+            return true;
+          } else {
+            showMessage('error', 'Popup blocked. Please use the Download button.');
+            return false;
+          }
+        } catch (e2) {
+          showMessage('error', 'Failed to auto-download report: ' + (e2 && e2.message ? e2.message : err.message));
+          return false;
+        }
+      }
+    }
+
+    // Download button: explicit/manual download
+    document.getElementById('downloadBtn').addEventListener('click', async () => {
+      const empInfoText = (document.getElementById('empInfo').textContent || '').replace(/\s+/g, '_');
+      const filename = `${empInfoText || 'attendance_report'}_${new Date().toISOString().slice(0,10)}.jpg`;
+      try {
+        await autoDownloadReport(filename);
       } catch (e) {
         showMessage('error', 'Failed to generate/download report: ' + e.message);
       }
     });
 
-    // Back buttons
+    // Back & grievance UI
     document.getElementById('backBtn').addEventListener('click', () => {
       document.getElementById('reportSection').style.display = 'none';
       document.getElementById('searchSection').style.display = 'block';
@@ -346,13 +360,12 @@
       document.getElementById('searchSection').style.display = 'block';
     });
 
-    // Grievance submit: sends to web app as GET (JSONP-friendly) or via fetch if CORS allows
+    // Grievance submit (same pattern as before: try fetch then JSONP)
     document.getElementById('grievanceForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('submitGrievance');
       const originalText = btn.textContent;
       btn.disabled = true; btn.textContent = 'Submitting...';
-
       const grievance = {
         empcode: document.getElementById('griev-empcode').value.trim(),
         empname: document.getElementById('griev-empname').value.trim(),
@@ -360,14 +373,11 @@
         issue_type: document.getElementById('griev-issue').value.trim(),
         details: document.getElementById('griev-details').value.trim()
       };
-
       try {
         if (!WEB_APP_URL || WEB_APP_URL.includes('AKfy...')) {
           showMessage('error', 'WEB_APP_URL not configured. Cannot submit grievance.');
           return;
         }
-
-        // try CORS POST/GET first
         try {
           const resp = await fetch(`${WEB_APP_URL}?action=submit_grievance&empcode=${encodeURIComponent(grievance.empcode)}&empname=${encodeURIComponent(grievance.empname)}&date=${encodeURIComponent(grievance.date)}&issue_type=${encodeURIComponent(grievance.issue_type)}&details=${encodeURIComponent(grievance.details)}`);
           if (resp.ok) {
@@ -382,7 +392,6 @@
             throw new Error('Non-OK response');
           }
         } catch (err) {
-          // JSONP fallback
           await new Promise((resolve, reject) => {
             const cb = 'cb_griev_' + Date.now();
             window[cb] = function(response) {
@@ -395,10 +404,7 @@
                   showMessage('error', 'Failed to submit grievance via web app.', 'grievanceMessage');
                   reject(new Error('submit failed'));
                 }
-              } catch (e) { reject(e); } finally {
-                delete window[cb];
-                const s = document.getElementById(cb + '_script'); if (s) s.remove();
-              }
+              } catch (e) { reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
             };
             const script = document.createElement('script');
             script.id = cb + '_script';
@@ -418,14 +424,12 @@
       }
     });
 
-    // Fetch data button hookup
+    // Hook fetch button
     document.getElementById('fetchDataBtn').addEventListener('click', fetchAllFromWebApp);
 
-    // On load: set data source label to include WEB_APP_URL if configured
+    // Keep the data-source label generic (do not show the raw web app URL)
     (function init() {
-      if (WEB_APP_URL && !WEB_APP_URL.includes('AKfy...')) {
-        document.getElementById('dataSourceInfo').textContent = `🌐 Data Source: ${WEB_APP_URL}`;
-      }
+      document.getElementById('dataSourceInfo').textContent = `🌐 Data Source: Google Apps Script Web App`;
     })();
   </script>
 </body>
