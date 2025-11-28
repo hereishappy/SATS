@@ -1,195 +1,813 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Attendance Lookup</title>
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Attendance Portal</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
   <style>
-    body{margin:0;font-family:Arial;background:#f4f4f4;padding:15px}
-    .box{background:#fff;padding:15px;border-radius:10px;box-shadow:0 0 10px #ddd;margin-bottom:15px}
-    input,select,textarea,button{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc;font-size:16px}
-    button{background:#005eff;color:#fff;border:none;margin-top:12px}
-    .link{background:none;color:#005eff;text-decoration:underline;margin-top:10px;border:none}
-    .row{display:flex;gap:10px}
-  </style>
-</head>
-<body>
-
-<div class="box">
-  <h2>Attendance Lookup</h2>
-  <label>EMPCODE</label>
-  <input id="empcode" placeholder="Enter EMPCODE">
-
-  <label>Month (optional)</label>
-  <select id="month">
-    <option value="">All</option>
-    <option value="1">Jan</option>
-    <option value="2">Feb</option>
-    <option value="3">Mar</option>
-    <option value="4">Apr</option>
-    <option value="5">May</option>
-    <option value="6">Jun</option>
-    <option value="7">Jul</option>
-    <option value="8">Aug</option>
-    <option value="9">Sep</option>
-    <option value="10">Oct</option>
-    <option value="11">Nov</option>
-    <option value="12">Dec</option>
-  </select>
-
-  <button id="searchBtn">Search & Download JPG</button>
-  <button id="grievBtn" class="link">Submit Grievance</button>
-
-  <p id="status" style="color:#444;font-size:14px;margin-top:10px;"></p>
-</div>
-
-<div id="grievBox" class="box" style="display:none">
-  <h3>Grievance</h3>
-  <label>EMPCODE</label>
-  <input id="gEmp" readonly>
-
-  <label>Description</label>
-  <textarea id="gMsg" rows="3"></textarea>
-
-  <button id="submitGriev">Submit</button>
-  <button id="closeGriev" class="link">Close</button>
-
-  <p id="gStatus" style="color:#444;font-size:14px;margin-top:10px;"></p>
-</div>
-
-<div id="reportBox" class="box" style="display:none">
-  <div id="report"></div>
-</div>
-
-<script>
-// === CONFIG — REPLACE THESE TWO URLs ===
-const SHEET_JSON_URL = "15JNjzdzZLwQS3angCz5sgMCfQctQ3LmsDRYX_fGwecA";
-const GRIEVANCE_POST_URL = "https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec";
-
-// Load html2canvas
-function loadHtml2Canvas(){
-  return new Promise((res)=>{
-    if(window.html2canvas){res();return;}
-    let s=document.createElement("script");
-    s.src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
-    s.onload=res;
-    document.head.appendChild(s);
-  });
-}
-
-function rowsToObjects(rows){
-  const header = rows[0];
-  const data=[];
-  for(let i=1;i<rows.length;i++){
-    let obj={};
-    header.forEach((h,j)=>obj[h]=rows[i][j]);
-    data.push(obj);
-  }
-  return data;
-}
-
-async function fetchSheet(){
-  const r = await fetch(SHEET_JSON_URL);
-  const j = await r.json();
-  return j.data;
-}
-
-function filterRows(rows, emp, month){
-  const objs = rowsToObjects(rows);
-  let f = objs.filter(r => (""+r.EMPCODE).toLowerCase() === emp.toLowerCase());
-  if(month) f = f.filter(r => Number(r.SHMONTH) === Number(month));
-  return f;
-}
-
-function computeTotals(rows){
-  const parse = (t)=>{
-    let m=t.match(/(\\d{1,2}):(\\d{2})/);
-    return m? Number(m[1])*60+Number(m[2]) : null;
-  };
-
-  let total=0, days=0, arr=[];
-  rows.forEach(r=>{
-    let i=parse(r.IN), o=parse(r.OUT);
-    if(i!=null && o!=null){
-      days++;
-      let diff=o-i;
-      if(diff<=0) diff+=1440;
-      total+=diff;
-      arr.push({...r, worked:diff});
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100%;
+      width: 100%;
     }
-  });
 
-  let ot = Math.max(0, total - days*720);
-  return {rows:arr, days, ot};
-}
+    * {
+      box-sizing: border-box;
+    }
 
-function renderReport(emp, empname, t){
-  let html = `<div style='padding:20px;font-family:Arial;background:#fff;width:100%;max-width:700px'>
-    <h2>${empname}</h2>
-    <p>EMPCODE: ${emp}</p>
-    <p>Present: ${t.days} | OT Hours: ${(t.ot/60).toFixed(2)}</p>
-    <hr>`;
-  t.rows.forEach(r=>{
-    html+=`<p>${r.SHDATE}-${r.SHMONTH}-${r.SHYEAR} | ${r.IN} → ${r.OUT} | ${(r.worked/60).toFixed(2)}h</p>`;
-  });
-  html+=`</div>`;
-  return html;
-}
+    .container {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px;
+      min-height: 100%;
+    }
 
-async function downloadJPG(html, emp){
-  await loadHtml2Canvas();
-  let div=document.createElement("div");
-  div.innerHTML=html;
-  document.getElementById("report").innerHTML="";
-  document.getElementById("report").appendChild(div);
+    .header {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
 
-  let canvas = await html2canvas(div,{scale:2});
-  let url = canvas.toDataURL("image/jpeg",0.95);
-  let a=document.createElement("a");
-  a.href=url; a.download=`${emp}_attendance.jpg`;
-  a.click();
-  document.getElementById("reportBox").style.display="block";
-}
+    .header h1 {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+      color: #667eea;
+    }
 
-document.getElementById("searchBtn").onclick = async ()=>{
-  let emp=document.getElementById("empcode").value.trim();
-  let month=document.getElementById("month").value;
-  if(!emp){document.getElementById("status").textContent="Enter EMPCODE";return;}
+    .header p {
+      margin: 0;
+      color: #666;
+      font-size: 14px;
+    }
 
-  let rows=await fetchSheet();
-  let f=filterRows(rows, emp, month);
-  if(f.length===0){document.getElementById("status").textContent="No records found";return;}
+    .search-section {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
-  let empname=f[0].EMPNAME;
-  let t=computeTotals(f);
-  let html=renderReport(emp, empname, t);
-  downloadJPG(html, emp);
-};
+    .search-section h2 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      color: #333;
+    }
 
-// grievance
-document.getElementById("grievBtn").onclick=()=>{
-  document.getElementById("gEmp").value=document.getElementById("empcode").value;
-  document.getElementById("grievBox").style.display="block";
-};
+    .search-group {
+      margin-bottom: 16px;
+    }
 
-document.getElementById("closeGriev").onclick=()=>{
-  document.getElementById("grievBox").style.display="none";
-};
+    .search-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #666;
+      font-weight: 500;
+    }
 
-document.getElementById("submitGriev").onclick=async()=>{
-  let emp=document.getElementById("gEmp").value.trim();
-  let msg=document.getElementById("gMsg").value.trim();
-  if(!msg){document.getElementById("gStatus").textContent="Enter message";return;}
+    .search-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
 
-  let res = await fetch(GRIEVANCE_POST_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({empcode:emp,message:msg,timestamp:new Date().toISOString()})
-  });
+    .search-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
 
-  document.getElementById("gStatus").textContent = res.ok?"Submitted":"Error";
-};
-</script>
+    .data-source-info {
+      background: #e8f4f8;
+      border-left: 4px solid #17a2b8;
+      padding: 12px;
+      margin-bottom: 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #0c5460;
+    }
 
-</body>
+    .data-source-info.external {
+      background: #d1ecf1;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 12px;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: #764ba2;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #633d8a;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(118, 75, 162, 0.4);
+    }
+
+    .btn-info {
+      background: #17a2b8;
+      color: white;
+    }
+
+    .btn-info:hover {
+      background: #138496;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+    }
+
+    .report-section {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+
+    .report-header {
+      text-align: center;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+
+    .report-header h2 {
+      margin: 0 0 8px 0;
+      color: #667eea;
+      font-size: 20px;
+    }
+
+    .report-header .emp-info {
+      font-size: 14px;
+      color: #666;
+      margin: 4px 0;
+    }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .summary-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .summary-card .label {
+      font-size: 12px;
+      opacity: 0.9;
+      margin-bottom: 4px;
+    }
+
+    .summary-card .value {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .attendance-list {
+      margin-top: 20px;
+    }
+
+    .attendance-list h3 {
+      font-size: 16px;
+      color: #333;
+      margin: 0 0 12px 0;
+    }
+
+    .attendance-item {
+      background: #f8f9fa;
+      border-left: 4px solid #667eea;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+    }
+
+    .attendance-item .date {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 6px;
+    }
+
+    .attendance-item .times {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .attendance-item .times span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .grievance-section {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+
+    .grievance-section h2 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+      margin-left: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .back-btn {
+      background: #6c757d;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+
+    .back-btn:hover {
+      background: #5a6268;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 12px;
+      }
+
+      .header h1 {
+        font-size: 20px;
+      }
+
+      .summary-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="container">
+   <div class="header">
+    <h1 id="app-title">Employee Attendance Portal</h1>
+    <p id="company-name">Your Company Name</p>
+   </div>
+   <div class="search-section" id="searchSection">
+    <h2>Search Attendance</h2>
+    <div class="data-source-info" id="dataSourceInfo">
+     📊 Data Source: Canva Sheet Storage
+    </div>
+    <div class="search-group"><label for="empcode" id="search-label">Enter Employee Code</label> <input type="text" id="empcode" placeholder="e.g., EMP001">
+    </div><button class="btn btn-primary" id="searchBtn">View My Attendance</button> <button class="btn btn-info" id="fetchDataBtn" style="display: none;">Fetch Data from URL</button> <button class="btn btn-secondary" id="grievanceBtn">Report Missing Attendance</button>
+   </div>
+   <div class="report-section" id="reportSection"><button class="back-btn" id="backBtn">← Back to Search</button>
+    <div class="report-header">
+     <h2 id="report-company">Your Company Name</h2>
+     <div class="emp-info" id="empInfo"></div>
+    </div>
+    <div class="summary-cards">
+     <div class="summary-card">
+      <div class="label">
+       Total Present Days
+      </div>
+      <div class="value" id="totalPresent">
+       0
+      </div>
+     </div>
+     <div class="summary-card">
+      <div class="label">
+       Total OT Hours
+      </div>
+      <div class="value" id="totalOT">
+       0
+      </div>
+     </div>
+    </div>
+    <div class="attendance-list">
+     <h3>Attendance Records</h3>
+     <div id="attendanceList"></div>
+    </div>
+   </div>
+   <div class="grievance-section" id="grievanceSection"><button class="back-btn" id="backBtn2">← Back to Search</button>
+    <h2>Report Missing Attendance / OT</h2>
+    <div class="message" id="grievanceMessage"></div>
+    <form id="grievanceForm">
+     <div class="form-group"><label for="griev-empcode">Employee Code *</label> <input type="text" id="griev-empcode" required>
+     </div>
+     <div class="form-group"><label for="griev-empname">Employee Name *</label> <input type="text" id="griev-empname" required>
+     </div>
+     <div class="form-group"><label for="griev-date">Date *</label> <input type="date" id="griev-date" required>
+     </div>
+     <div class="form-group"><label for="griev-issue">Issue Type *</label> <input type="text" id="griev-issue" placeholder="e.g., Missing attendance, Wrong OT hours" required>
+     </div>
+     <div class="form-group"><label for="griev-details">Details *</label> <textarea id="griev-details" placeholder="Please describe the issue in detail..." required></textarea>
+     </div><button type="submit" class="btn btn-primary" id="submitGrievance">Submit Grievance</button>
+    </form>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      app_title: "Employee Attendance Portal",
+      company_name: "Your Company Name",
+      search_label: "Enter Employee Code",
+      data_source_url: "",
+      primary_color: "#667eea",
+      secondary_color: "#764ba2",
+      background_color: "#f8f9fa",
+      text_color: "#333333",
+      button_color: "#667eea",
+      font_family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto",
+      font_size: 16
+    };
+
+    let attendanceRecords = [];
+    let grievanceRecords = [];
+    let externalDataCache = [];
+
+    const dataHandler = {
+      onDataChanged(data) {
+        // Separate attendance and grievance records
+        attendanceRecords = data.filter(record => record.in_time !== undefined);
+        grievanceRecords = data.filter(record => record.in_time === undefined);
+      }
+    };
+
+    async function initializeApp() {
+      const initResult = await window.dataSdk.init(dataHandler);
+      if (!initResult.isOk) {
+        console.error("Failed to initialize data SDK");
+      }
+      
+      if (window.elementSdk) {
+        await window.elementSdk.init({
+          defaultConfig,
+          onConfigChange: async (config) => {
+            const appTitle = config.app_title || defaultConfig.app_title;
+            const companyName = config.company_name || defaultConfig.company_name;
+            const searchLabel = config.search_label || defaultConfig.search_label;
+            const dataSourceUrl = config.data_source_url || defaultConfig.data_source_url;
+            const primaryColor = config.primary_color || defaultConfig.primary_color;
+            const secondaryColor = config.secondary_color || defaultConfig.secondary_color;
+            const backgroundColor = config.background_color || defaultConfig.background_color;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const buttonColor = config.button_color || defaultConfig.button_color;
+            const fontFamily = config.font_family || defaultConfig.font_family;
+            const fontSize = config.font_size || defaultConfig.font_size;
+
+            document.getElementById('app-title').textContent = appTitle;
+            document.getElementById('company-name').textContent = companyName;
+            document.getElementById('report-company').textContent = companyName;
+            document.getElementById('search-label').textContent = searchLabel;
+
+            // Update data source UI
+            const fetchBtn = document.getElementById('fetchDataBtn');
+            const dataSourceInfo = document.getElementById('dataSourceInfo');
+            
+            if (dataSourceUrl && dataSourceUrl.trim() !== '') {
+              fetchBtn.style.display = 'block';
+              dataSourceInfo.innerHTML = '🌐 Data Source: External URL + Canva Sheet';
+              dataSourceInfo.classList.add('external');
+            } else {
+              fetchBtn.style.display = 'none';
+              dataSourceInfo.innerHTML = '📊 Data Source: Canva Sheet Storage';
+              dataSourceInfo.classList.remove('external');
+            }
+
+            document.body.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
+            document.body.style.fontFamily = `${fontFamily}, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto`;
+            document.body.style.fontSize = `${fontSize}px`;
+
+            const summaryCards = document.querySelectorAll('.summary-card');
+            summaryCards.forEach(card => {
+              card.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
+            });
+
+            const primaryButtons = document.querySelectorAll('.btn-primary');
+            primaryButtons.forEach(btn => {
+              btn.style.background = buttonColor;
+            });
+
+            const secondaryButtons = document.querySelectorAll('.btn-secondary');
+            secondaryButtons.forEach(btn => {
+              btn.style.background = secondaryColor;
+            });
+
+            const reportHeader = document.querySelector('.report-header');
+            if (reportHeader) {
+              reportHeader.style.borderBottomColor = primaryColor;
+            }
+
+            const reportH2 = document.querySelector('.report-header h2');
+            if (reportH2) {
+              reportH2.style.color = primaryColor;
+            }
+
+            const attendanceItems = document.querySelectorAll('.attendance-item');
+            attendanceItems.forEach(item => {
+              item.style.borderLeftColor = primaryColor;
+            });
+          },
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              {
+                get: () => config.primary_color || defaultConfig.primary_color,
+                set: (value) => {
+                  window.elementSdk.config.primary_color = value;
+                  window.elementSdk.setConfig({ primary_color: value });
+                }
+              },
+              {
+                get: () => config.secondary_color || defaultConfig.secondary_color,
+                set: (value) => {
+                  window.elementSdk.config.secondary_color = value;
+                  window.elementSdk.setConfig({ secondary_color: value });
+                }
+              },
+              {
+                get: () => config.background_color || defaultConfig.background_color,
+                set: (value) => {
+                  window.elementSdk.config.background_color = value;
+                  window.elementSdk.setConfig({ background_color: value });
+                }
+              },
+              {
+                get: () => config.text_color || defaultConfig.text_color,
+                set: (value) => {
+                  window.elementSdk.config.text_color = value;
+                  window.elementSdk.setConfig({ text_color: value });
+                }
+              },
+              {
+                get: () => config.button_color || defaultConfig.button_color,
+                set: (value) => {
+                  window.elementSdk.config.button_color = value;
+                  window.elementSdk.setConfig({ button_color: value });
+                }
+              }
+            ],
+            borderables: [],
+            fontEditable: {
+              get: () => config.font_family || defaultConfig.font_family,
+              set: (value) => {
+                window.elementSdk.config.font_family = value;
+                window.elementSdk.setConfig({ font_family: value });
+              }
+            },
+            fontSizeable: {
+              get: () => config.font_size || defaultConfig.font_size,
+              set: (value) => {
+                window.elementSdk.config.font_size = value;
+                window.elementSdk.setConfig({ font_size: value });
+              }
+            }
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ["app_title", config.app_title || defaultConfig.app_title],
+            ["company_name", config.company_name || defaultConfig.company_name],
+            ["search_label", config.search_label || defaultConfig.search_label],
+            ["data_source_url", config.data_source_url || defaultConfig.data_source_url]
+          ])
+        });
+      }
+    }
+
+    // Fetch data from external URL
+    document.getElementById('fetchDataBtn').addEventListener('click', async () => {
+      const config = window.elementSdk ? window.elementSdk.config : defaultConfig;
+      const dataSourceUrl = config.data_source_url || defaultConfig.data_source_url;
+
+      if (!dataSourceUrl || dataSourceUrl.trim() === '') {
+        showMessage('error', 'No data source URL configured');
+        return;
+      }
+
+      const btn = document.getElementById('fetchDataBtn');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.innerHTML = 'Fetching... <span class="loading"></span>';
+
+      try {
+        const response = await fetch(dataSourceUrl);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Validate and cache external data
+        if (Array.isArray(data)) {
+          externalDataCache = data.filter(record => 
+            record.empcode && record.empname && record.in_time && record.out_time
+          );
+          showMessage('success', `Successfully fetched ${externalDataCache.length} attendance records from external source`);
+        } else {
+          throw new Error('Invalid data format. Expected an array of attendance records.');
+        }
+
+      } catch (error) {
+        showMessage('error', `Failed to fetch data: ${error.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+      const empcode = document.getElementById('empcode').value.trim().toUpperCase();
+      
+      if (!empcode) {
+        showMessage('error', 'Please enter an employee code');
+        return;
+      }
+
+      const btn = document.getElementById('searchBtn');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.innerHTML = 'Searching... <span class="loading"></span>';
+
+      // Combine records from Canva Sheet and external cache
+      const combinedRecords = [...attendanceRecords, ...externalDataCache];
+      
+      // Filter records for this employee
+      const employeeRecords = combinedRecords.filter(record => 
+        record.empcode.toUpperCase() === empcode
+      );
+
+      btn.disabled = false;
+      btn.textContent = originalText;
+
+      if (employeeRecords.length === 0) {
+        showMessage('error', 'No attendance records found for this employee code');
+        return;
+      }
+
+      displayReport(employeeRecords);
+    });
+
+    function displayReport(records) {
+      document.getElementById('searchSection').style.display = 'none';
+      document.getElementById('reportSection').style.display = 'block';
+
+      const empcode = records[0].empcode;
+      const empname = records[0].empname;
+
+      document.getElementById('empInfo').innerHTML = `
+        <strong>${empname}</strong> (${empcode})
+      `;
+
+      // Calculate totals
+      let totalPresent = records.length;
+      let totalOTHours = 0;
+
+      records.forEach(record => {
+        const otHours = calculateOT(record.in_time, record.out_time);
+        totalOTHours += otHours;
+      });
+
+      document.getElementById('totalPresent').textContent = totalPresent;
+      document.getElementById('totalOT').textContent = totalOTHours.toFixed(1);
+
+      // Display attendance list
+      const listHtml = records.map(record => {
+        const otHours = calculateOT(record.in_time, record.out_time);
+        const date = `${record.shdate}/${record.shmonth}/${record.shyear}`;
+        
+        return `
+          <div class="attendance-item">
+            <div class="date">${date}</div>
+            <div class="times">
+              <span>🕐 IN: ${record.in_time}</span>
+              <span>🕐 OUT: ${record.out_time}</span>
+            </div>
+            ${otHours > 0 ? `<div style="margin-top: 6px; color: #667eea; font-size: 13px; font-weight: 600;">⏱️ OT: ${otHours.toFixed(1)} hours</div>` : ''}
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('attendanceList').innerHTML = listHtml;
+    }
+
+    function calculateOT(inTime, outTime) {
+      if (!inTime || !outTime) return 0;
+
+      const [inHour, inMin] = inTime.split(':').map(Number);
+      const [outHour, outMin] = outTime.split(':').map(Number);
+
+      let inMinutes = inHour * 60 + inMin;
+      let outMinutes = outHour * 60 + outMin;
+
+      // Handle next day checkout
+      if (outMinutes < inMinutes) {
+        outMinutes += 24 * 60;
+      }
+
+      const totalMinutes = outMinutes - inMinutes;
+      const totalHours = totalMinutes / 60;
+
+      // Standard shift is 12 hours
+      const otHours = Math.max(0, totalHours - 12);
+
+      return otHours;
+    }
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      document.getElementById('reportSection').style.display = 'none';
+      document.getElementById('searchSection').style.display = 'block';
+    });
+
+    document.getElementById('grievanceBtn').addEventListener('click', () => {
+      document.getElementById('searchSection').style.display = 'none';
+      document.getElementById('grievanceSection').style.display = 'block';
+    });
+
+    document.getElementById('backBtn2').addEventListener('click', () => {
+      document.getElementById('grievanceSection').style.display = 'none';
+      document.getElementById('searchSection').style.display = 'block';
+    });
+
+    document.getElementById('grievanceForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const btn = document.getElementById('submitGrievance');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.innerHTML = 'Submitting... <span class="loading"></span>';
+
+      const grievance = {
+        empcode: document.getElementById('griev-empcode').value.trim(),
+        empname: document.getElementById('griev-empname').value.trim(),
+        date: document.getElementById('griev-date').value,
+        issue_type: document.getElementById('griev-issue').value.trim(),
+        details: document.getElementById('griev-details').value.trim(),
+        submitted_at: new Date().toISOString()
+      };
+
+      const result = await window.dataSdk.create(grievance);
+
+      btn.disabled = false;
+      btn.textContent = originalText;
+
+      if (result.isOk) {
+        showMessage('success', 'Grievance submitted successfully! Your request will be reviewed.', 'grievanceMessage');
+        document.getElementById('grievanceForm').reset();
+        
+        setTimeout(() => {
+          document.getElementById('grievanceSection').style.display = 'none';
+          document.getElementById('searchSection').style.display = 'block';
+          hideMessage('grievanceMessage');
+        }, 2000);
+      } else {
+        showMessage('error', 'Failed to submit grievance. Please try again.', 'grievanceMessage');
+      }
+    });
+
+    function showMessage(type, text, elementId = 'message') {
+      const messageEl = document.getElementById(elementId);
+      if (messageEl) {
+        messageEl.className = `message ${type}`;
+        messageEl.textContent = text;
+        messageEl.style.display = 'block';
+        
+        setTimeout(() => {
+          hideMessage(elementId);
+        }, 5000);
+      } else {
+        // Create inline message for search section
+        const existingMsg = document.querySelector('.search-section .message');
+        if (existingMsg) existingMsg.remove();
+        
+        const msg = document.createElement('div');
+        msg.className = `message ${type}`;
+        msg.textContent = text;
+        msg.style.display = 'block';
+        
+        const searchSection = document.getElementById('searchSection');
+        searchSection.insertBefore(msg, searchSection.querySelector('.search-group'));
+        
+        setTimeout(() => {
+          msg.remove();
+        }, 5000);
+      }
+    }
+
+    function hideMessage(elementId) {
+      const messageEl = document.getElementById(elementId);
+      if (messageEl) {
+        messageEl.style.display = 'none';
+      }
+    }
+
+    initializeApp();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a5912a3d5657e8a',t:'MTc2NDMyNDU5OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
