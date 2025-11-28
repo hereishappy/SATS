@@ -1,232 +1,243 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Employee Attendance Portal</title>
 
-  <!-- html2canvas used to generate JPG download on device -->
+  <!-- html2canvas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5wZ3zXq4+ZbJgXn1xvB2p1mS2k3gQYwX3qz2m1y1q9/0+UoI8V2zKp1cw5wX1R3lD7k1O4wzI7Yt9G1mBg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <style>
     body{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100%;color:#333}
-    .container{width:100%;max-width:480px;margin:0 auto;padding:20px;min-height:100%}
-    .header{background:#fff;border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1);text-align:center}
-    .header h1{margin:0 0 8px 0;font-size:24px;color:#667eea}
-    .search-section,.report-section,.grievance-section{background:#fff;border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1)}
-    .search-group{margin-bottom:16px}
-    .search-group label{display:block;margin-bottom:8px;font-size:14px;color:#666;font-weight:500}
-    input[type="text"], input[type="date"], textarea{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px}
-    .btn{width:100%;padding:14px;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;margin-bottom:12px}
-    .btn-primary{background:#667eea;color:#fff}
-    .btn-info{background:#17a2b8;color:#fff}
-    .btn-secondary{background:#764ba2;color:#fff}
-    .back-btn{background:#6c757d;color:#fff;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;margin-bottom:16px}
-    .message{display:none;padding:12px;border-radius:8px;margin-bottom:16px}
-    .message.success{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
-    .message.error{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
-    .attendance-item{background:#f8f9fa;border-left:4px solid #667eea;padding:12px;margin-bottom:8px;border-radius:8px}
-    .summary-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
-    .summary-card{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:16px;border-radius:12px;text-align:center}
-    @media(max-width:480px){.container{padding:12px}.summary-cards{grid-template-columns:1fr}}
+    .container{width:100%;max-width:480px;margin:0 auto;padding:18px}
+    .header{background:#fff;border-radius:12px;padding:18px;margin-bottom:16px;text-align:center}
+    h1{margin:0;color:#667eea;font-size:20px}
+    .search-section,.report-section,.grievance-section{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px}
+    .search-group{margin-bottom:12px}
+    label{display:block;margin-bottom:6px;color:#666;font-weight:600}
+    input,textarea{width:100%;padding:10px;border:1px solid #eee;border-radius:8px;font-size:15px}
+    .btn{width:100%;padding:12px;border-radius:8px;border:0;color:#fff;font-weight:700;margin-bottom:10px;cursor:pointer}
+    .btn-primary{background:#667eea}
+    .btn-info{background:#17a2b8}
+    .btn-secondary{background:#764ba2}
+    .back-btn{background:#6c757d;color:#fff;padding:8px 12px;border-radius:8px;border:0;cursor:pointer;margin-bottom:12px}
+    .attendance-item{background:#f8f9fa;border-left:4px solid #667eea;padding:10px;margin-bottom:8px;border-radius:8px}
+    .summary-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+    .summary-card{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:12px;border-radius:8px;text-align:center}
+    .message{display:none;padding:10px;border-radius:8px;margin-bottom:10px}
+    .message.success{background:#d4edda;color:#155724}
+    .message.error{background:#f8d7da;color:#721c24}
+    .download-hint{font-size:13px;color:#444;margin-top:8px}
+    @media(max-width:480px){h1{font-size:18px}}
+    /* overlay for progress */
+    #downloadOverlay{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:9999}
+    #downloadOverlay .box{background:#fff;padding:16px;border-radius:8px;max-width:90%;text-align:center}
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1 id="app-title">Employee Attendance Portal</h1>
-      <p id="company-name">Your Company Name</p>
+      <h1>Employee Attendance Portal</h1>
+      <div id="company-name" style="font-size:13px;color:#666">Your Company Name</div>
     </div>
 
     <div class="search-section" id="searchSection">
-      <h2>Search Attendance</h2>
-
-      <!-- Removed display of the actual web app URL per request -->
-      <div class="data-source-info" id="dataSourceInfo">🌐 Data Source: Google Apps Script Web App</div>
+      <h2 style="font-size:16px;margin:0 0 8px 0">Search Attendance</h2>
+      <div id="dataSourceInfo" style="font-size:13px;color:#444;margin-bottom:12px">🌐 Data Source: Google Apps Script Web App</div>
 
       <div class="search-group">
-        <label for="empcode" id="search-label">Enter Employee Code</label>
-        <input type="text" id="empcode" placeholder="e.g., EMP001" autocomplete="off"/>
+        <label for="empcode">Enter Employee Code</label>
+        <input id="empcode" type="text" placeholder="e.g., EMP001" autocomplete="off"/>
       </div>
 
-      <button class="btn btn-primary" id="searchBtn">View My Attendance</button>
-      <button class="btn btn-info" id="fetchDataBtn">Fetch Latest Attendance (from Web App)</button>
-      <button class="btn btn-info" id="grievanceBtn">Report Missing / OT</button>
+      <button id="searchBtn" class="btn btn-primary">View My Attendance</button>
+      <button id="fetchDataBtn" class="btn btn-info">Fetch Latest Attendance (from Web App)</button>
+      <button id="grievanceBtn" class="btn btn-info">Report Missing / OT</button>
+      <div id="inlineMessage" class="message"></div>
     </div>
 
     <div class="report-section" id="reportSection" style="display:none">
-      <button class="back-btn" id="backBtn">← Back to Search</button>
-      <div class="report-header" id="reportHeader">
-        <h2 id="report-company">Your Company Name</h2>
-        <div class="emp-info" id="empInfo"></div>
+      <button id="backBtn" class="back-btn">← Back to Search</button>
+
+      <div id="reportHeader" style="text-align:center;margin-bottom:12px">
+        <div id="report-company" style="font-weight:700;color:#667eea">Your Company Name</div>
+        <div id="empInfo" style="color:#333;margin-top:6px"></div>
       </div>
 
       <div class="summary-cards">
         <div class="summary-card">
-          <div class="label">Total Present Days</div>
-          <div class="value" id="totalPresent">0</div>
+          <div style="font-size:12px;opacity:.9">Total Present Days</div>
+          <div id="totalPresent" style="font-size:20px;font-weight:800">0</div>
         </div>
         <div class="summary-card">
-          <div class="label">Total OT Hours</div>
-          <div class="value" id="totalOT">0</div>
+          <div style="font-size:12px;opacity:.9">Total OT Hours</div>
+          <div id="totalOT" style="font-size:20px;font-weight:800">0</div>
         </div>
       </div>
 
-      <div class="attendance-list">
-        <h3>Attendance Records</h3>
+      <div>
+        <h3 style="margin:0 0 8px 0;font-size:15px">Attendance Records</h3>
         <div id="attendanceList"></div>
       </div>
 
-      <!-- Download button for individual attendance report -->
-      <div style="margin-top:16px">
-        <button class="btn btn-secondary" id="downloadBtn">Download Report (JPG)</button>
+      <div style="margin-top:12px">
+        <button id="downloadBtn" class="btn btn-secondary">Download Report (JPG)</button>
+        <div class="download-hint" id="downloadHint">If the download doesn't start automatically, tap the button above. On iPhone/Safari the image will open in a new tab — long-press to save.</div>
       </div>
     </div>
 
     <div class="grievance-section" id="grievanceSection" style="display:none">
-      <button class="back-btn" id="backBtn2">← Back to Search</button>
-      <h2>Report Missing Attendance / OT</h2>
-      <div class="message" id="grievanceMessage"></div>
+      <button id="backBtn2" class="back-btn">← Back to Search</button>
+      <h2 style="font-size:16px;margin:0 0 8px 0">Report Missing Attendance / OT</h2>
+      <div id="grievanceMessage" class="message"></div>
       <form id="grievanceForm">
-        <div class="form-group">
+        <div style="margin-bottom:8px">
           <label for="griev-empcode">Employee Code *</label>
-          <input type="text" id="griev-empcode" required />
+          <input id="griev-empcode" required/>
         </div>
-        <div class="form-group">
+        <div style="margin-bottom:8px">
           <label for="griev-empname">Employee Name *</label>
-          <input type="text" id="griev-empname" required />
+          <input id="griev-empname" required/>
         </div>
-        <div class="form-group">
+        <div style="margin-bottom:8px">
           <label for="griev-date">Date *</label>
-          <input type="date" id="griev-date" required />
+          <input id="griev-date" type="date" required/>
         </div>
-        <div class="form-group">
+        <div style="margin-bottom:8px">
           <label for="griev-issue">Issue Type *</label>
-          <input type="text" id="griev-issue" placeholder="e.g., Missing attendance, Wrong OT hours" required />
+          <input id="griev-issue" placeholder="Missing attendance / Wrong OT" required/>
         </div>
-        <div class="form-group">
+        <div style="margin-bottom:8px">
           <label for="griev-details">Details *</label>
-          <textarea id="griev-details" placeholder="Please describe the issue in detail..." required></textarea>
+          <textarea id="griev-details" rows="4" required></textarea>
         </div>
-        <button type="submit" class="btn btn-primary" id="submitGrievance">Submit Grievance</button>
+        <button id="submitGrievance" class="btn btn-primary" type="submit">Submit Grievance</button>
       </form>
     </div>
   </div>
 
-  <script>
-    /**
-     * IMPORTANT:
-     * Set WEB_APP_URL to your deployed Google Apps Script Web App URL (the one you get when you deploy "Web app").
-     * Example: "https://script.google.com/macros/s/AKfycbx.../exec"
-     */
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec"; // <-- REPLACE with your web app URL
+  <!-- overlay used during download generation -->
+  <div id="downloadOverlay"><div class="box"><div id="downloadOverlayText">Generating report...</div></div></div>
 
+  <script>
+    // Replace with your deployed Apps Script Web App URL (do not show it in UI)
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec'; // <-- set this (keeps hidden)
+
+    // state
     let externalDataCache = [];
 
-    function showMessage(type, text, targetId = null) {
-      const id = targetId || null;
-      if (id) {
-        const el = document.getElementById(id);
-        if (el) { el.className = `message ${type}`; el.textContent = text; el.style.display = 'block'; setTimeout(()=> el.style.display='none',5000); return; }
-      }
-      const existing = document.querySelector('.search-section .message');
-      if (existing) existing.remove();
-      const msg = document.createElement('div');
-      msg.className = `message ${type}`;
-      msg.textContent = text;
-      msg.style.display = 'block';
-      const searchSection = document.getElementById('searchSection');
-      searchSection.insertBefore(msg, searchSection.querySelector('.search-group'));
-      setTimeout(()=> msg.remove(), 5000);
+    // ---------- utilities ----------
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    function isSafari() {
+      const ua = navigator.userAgent;
+      return /Safari/.test(ua) && !/Chrome|Chromium|Android/.test(ua);
+    }
+    function showInlineMessage(type, text, timeout = 4000) {
+      const el = document.getElementById('inlineMessage');
+      el.className = 'message ' + (type || '');
+      el.textContent = text;
+      el.style.display = 'block';
+      setTimeout(()=> el.style.display = 'none', timeout);
+    }
+    function showGrievanceMessage(type, text, timeout = 4000) {
+      const el = document.getElementById('grievanceMessage');
+      el.className = 'message ' + (type || '');
+      el.textContent = text;
+      el.style.display = 'block';
+      setTimeout(()=> el.style.display = 'none', timeout);
     }
 
+    // ---------- fetch helpers ----------
     async function fetchAllFromWebApp() {
       if (!WEB_APP_URL || WEB_APP_URL.includes('AKfy...')) {
-        showMessage('error', 'WEB_APP_URL not configured. Edit the index.html constant WEB_APP_URL and set it to your Apps Script Web App URL.');
+        showInlineMessage('error','WEB_APP_URL not configured. Edit the HTML to set WEB_APP_URL.');
         return;
       }
-
       const btn = document.getElementById('fetchDataBtn');
       const originalText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = 'Fetching...';
-
+      btn.disabled = true; btn.textContent = 'Fetching...';
       try {
-        const res = await fetch(`${WEB_APP_URL}?action=all`);
+        // try CORS fetch
+        const res = await fetch(WEB_APP_URL + '?action=all');
         if (res.ok) {
           const payload = await res.json();
-          externalDataCache = payload.data && Array.isArray(payload.data) ? payload.data : (Array.isArray(payload) ? payload : []);
-          showMessage('success', `Fetched ${externalDataCache.length} records from web app.`);
+          externalDataCache = Array.isArray(payload.data) ? payload.data : (Array.isArray(payload) ? payload : []);
+          showInlineMessage('success', `Fetched ${externalDataCache.length} records.`);
           return;
         }
-        throw new Error('Non-OK response, trying JSONP fallback');
+        throw new Error('non-ok response');
       } catch (err) {
+        // JSONP fallback
         try {
           await new Promise((resolve, reject) => {
-            const cb = 'cb_' + Date.now();
+            const cb = 'cb_all_' + Date.now();
             window[cb] = function(response) {
               try {
-                externalDataCache = response && response.data ? response.data : (Array.isArray(response) ? response : []);
-                showMessage('success', `Fetched ${externalDataCache.length} records via JSONP.`);
+                externalDataCache = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
                 resolve();
               } catch (e) { reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
             };
-            const script = document.createElement('script');
-            script.id = cb + '_script';
-            script.src = `${WEB_APP_URL}?action=all&callback=${cb}`;
-            script.onerror = function(){ delete window[cb]; script.remove(); reject(new Error('JSONP failed')); };
-            document.head.appendChild(script);
+            const s = document.createElement('script');
+            s.id = cb + '_script';
+            s.src = WEB_APP_URL + '?action=all&callback=' + cb;
+            s.onerror = function(){ delete window[cb]; s.remove(); reject(new Error('JSONP failed')); };
+            document.head.appendChild(s);
           });
+          showInlineMessage('success', `Fetched ${externalDataCache.length} records (JSONP).`);
         } catch (e) {
-          showMessage('error', 'Failed to fetch data from web app: ' + e.message);
+          showInlineMessage('error','Failed to fetch data: ' + (e.message || e));
         }
       } finally {
-        btn.disabled = false;
-        btn.textContent = originalText;
+        btn.disabled = false; btn.textContent = originalText;
       }
     }
 
-    document.getElementById('searchBtn').addEventListener('click', async () => {
-      const empcode = (document.getElementById('empcode').value || '').trim().toUpperCase();
-      if (!empcode) { showMessage('error', 'Please enter an employee code'); return; }
+    // ---------- search & display ----------
+    document.getElementById('fetchDataBtn').addEventListener('click', fetchAllFromWebApp);
 
-      const btn = document.getElementById('searchBtn');
-      const originalText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = 'Searching...';
+    document.getElementById('searchBtn').addEventListener('click', async function() {
+      const empcode = (document.getElementById('empcode').value || '').trim().toUpperCase();
+      if (!empcode) { showInlineMessage('error','Please enter employee code'); return; }
+      this.disabled = true; const orig = this.textContent; this.textContent = 'Searching...';
 
       let results = (externalDataCache || []).filter(r => (r.empcode || '').toString().toUpperCase() === empcode);
 
       if ((!results || results.length === 0) && WEB_APP_URL && !WEB_APP_URL.includes('AKfy...')) {
+        // try server-side employee endpoint
         try {
-          const res = await fetch(`${WEB_APP_URL}?action=employee&empcode=${encodeURIComponent(empcode)}`);
+          const res = await fetch(WEB_APP_URL + '?action=employee&empcode=' + encodeURIComponent(empcode));
           if (res.ok) {
             const payload = await res.json();
             results = payload.data || (Array.isArray(payload) ? payload : []);
           } else {
-            await new Promise((resolve, reject) => {
+            // JSONP fallback
+            await new Promise((resolve,reject) => {
               const cb = 'cb_emp_' + Date.now();
-              window[cb] = function(response) {
+              window[cb] = function(resp) {
                 try {
-                  const data = response && response.data ? response.data : (Array.isArray(response) ? response : []);
-                  results = data; resolve();
-                } catch (e) { reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
+                  results = Array.isArray(resp.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                  resolve();
+                } catch (e){ reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
               };
-              const script = document.createElement('script');
-              script.id = cb + '_script';
-              script.src = `${WEB_APP_URL}?action=employee&empcode=${encodeURIComponent(empcode)}&callback=${cb}`;
-              script.onerror = function(){ delete window[cb]; script.remove(); reject(new Error('JSONP failed')); };
-              document.head.appendChild(script);
+              const s = document.createElement('script');
+              s.id = cb + '_script';
+              s.src = WEB_APP_URL + '?action=employee&empcode=' + encodeURIComponent(empcode) + '&callback=' + cb;
+              s.onerror = function(){ delete window[cb]; s.remove(); reject(new Error('JSONP failed')); };
+              document.head.appendChild(s);
             });
           }
-        } catch (e) { console.warn('employee fetch error', e); }
+        } catch (e) {
+          console.warn('employee fetch error', e);
+        }
       }
 
-      btn.disabled = false;
-      btn.textContent = originalText;
+      this.disabled = false; this.textContent = orig;
 
       if (!results || results.length === 0) {
-        showMessage('error', 'No attendance records found for this employee code');
+        showInlineMessage('error','No attendance records found for this employee code');
         return;
       }
 
@@ -239,134 +250,186 @@
 
       const empcode = records[0].empcode || records[0].EMPCODE || '';
       const empname = records[0].empname || records[0].EMPNAME || '';
-
-      document.getElementById('empInfo').innerHTML = `<strong>${empname}</strong> (${empcode})`;
+      document.getElementById('empInfo').innerHTML = '<strong>' + (empname||'') + '</strong> (' + (empcode||'') + ')';
 
       let totalPresent = records.length;
-      let totalOTHours = 0;
-      records.forEach(r => {
-        const inT = r.in_time || r.IN || r['IN'] || '';
-        const outT = r.out_time || r.OUT || r['OUT'] || '';
-        totalOTHours += calculateOT(inT, outT);
-      });
-
-      document.getElementById('totalPresent').textContent = totalPresent;
-      document.getElementById('totalOT').textContent = totalOTHours.toFixed(1);
-
-      const listHtml = records.map(record => {
-        const inTime = record.in_time || record.IN || record['IN'] || '';
-        const outTime = record.out_time || record.OUT || record['OUT'] || '';
-        const otHours = calculateOT(inTime, outTime);
-        const shdate = (record.shdate || record.SHDATE || '') || '';
-        const shmonth = (record.shmonth || record.SHM || record.SHMONT || '') || '';
-        const shyear = (record.shyear || record.SHYEAR || '') || '';
-        const formattedDate = `${shdate}/${shmonth}/${shyear}`;
-        return `<div class="attendance-item">
-                  <div class="date">${formattedDate}</div>
-                  <div class="times">
-                    <span>🕐 IN: ${inTime}</span>
-                    <span>🕐 OUT: ${outTime}</span>
-                  </div>
-                  ${otHours>0?`<div style="margin-top:6px;color:#667eea;font-size:13px;font-weight:600;">⏱️ OT: ${otHours.toFixed(1)} hours</div>`:''}
-                </div>`;
+      let totalOT = 0;
+      const listHtml = records.map(r => {
+        const inT = (r.in_time || r.IN || r['IN'] || '');
+        const outT = (r.out_time || r.OUT || r['OUT'] || '');
+        totalOT += calculateOT(inT, outT);
+        const d = `${r.shdate||r.SHDATE||''}/${r.shmonth||r.SHM||r.SHMONT||''}/${r.shyear||r.SHYEAR||''}`;
+        return `<div class="attendance-item"><div style="font-weight:700">${d}</div><div style="margin-top:6px;display:flex;justify-content:space-between"><div>🕐 IN: ${inT}</div><div>🕐 OUT: ${outT}</div></div>${calculateOT(inT,outT)>0?'<div style="margin-top:6px;color:#667eea;font-weight:700">⏱️ OT: '+calculateOT(inT,outT).toFixed(1)+' hours</div>':''}</div>`;
       }).join('');
       document.getElementById('attendanceList').innerHTML = listHtml;
+      document.getElementById('totalPresent').textContent = totalPresent;
+      document.getElementById('totalOT').textContent = totalOT.toFixed(1);
 
-      // Improve auto-download:
-      // - Try to auto-generate & download the JPG.
-      // - If download is blocked or fails, fallback to opening the image in a new tab and show a helpful message.
-      // - Keep the manual Download button available.
-      setTimeout(() => {
-        autoDownloadReport(`${empcode || 'attendance'}_${(empname||'').replace(/\s+/g,'_') || ''}_${new Date().toISOString().slice(0,10)}.jpg`);
-      }, 700);
+      // Attempt auto-download, but use detection & robust fallbacks.
+      const filename = `${(empcode||'attendance')}_${(empname||'report').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.jpg`;
+      // small delay to allow render
+      setTimeout(()=> { autoDownloadReport(filename); }, 600);
     }
 
     function calculateOT(inTime, outTime) {
       if (!inTime || !outTime) return 0;
-      const [inH, inM] = (inTime.split(':').map(Number));
-      const [outH, outM] = (outTime.split(':').map(Number));
-      if (isNaN(inH) || isNaN(outH)) return 0;
-      let inMin = inH * 60 + (inM || 0);
-      let outMin = outH * 60 + (outM || 0);
+      const [ih,im] = (inTime.split(':').map(Number));
+      const [oh,om] = (outTime.split(':').map(Number));
+      if (isNaN(ih) || isNaN(oh)) return 0;
+      let inMin = ih*60 + (im||0);
+      let outMin = oh*60 + (om||0);
       if (outMin < inMin) outMin += 24*60;
-      const hours = (outMin - inMin) / 60;
+      const hours = (outMin-inMin)/60;
       return Math.max(0, hours - 12);
     }
 
+    // ---------- improved auto download with multiple fallbacks ----------
     async function autoDownloadReport(filename) {
+      const overlay = document.getElementById('downloadOverlay');
+      const overlayText = document.getElementById('downloadOverlayText');
+      overlayText.textContent = 'Preparing report image...';
+      overlay.style.display = 'flex';
+
       const reportEl = document.getElementById('reportSection');
+
       try {
-        const canvas = await html2canvas(reportEl, { scale: 2, useCORS: true, logging: false });
-        // primary attempt: blob + anchor click (works in most Android/Chrome & modern browsers)
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-        if (blob) {
-          const link = document.createElement('a');
-          const url = URL.createObjectURL(blob);
-          link.href = url;
-          link.download = filename;
-          // Append and click to trigger download
-          document.body.appendChild(link);
-          link.click();
-          // Clean up
-          setTimeout(() => { URL.revokeObjectURL(url); link.remove(); }, 1500);
-          showMessage('success', 'Report download started. If it did not start automatically, tap Download Report (JPG).');
-          return true;
-        }
-        throw new Error('Could not create blob from canvas');
-      } catch (err) {
-        // fallback: open image in new tab so user can save manually (works on iOS Safari)
-        try {
-          const canvas = await html2canvas(reportEl, { scale: 1.5, useCORS: true, logging: false });
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        // Use a slightly higher scale for clarity on phones
+        const scale = Math.min(window.devicePixelRatio || 2, 3);
+        const canvas = await html2canvas(reportEl, { scale: scale, useCORS: true, allowTaint: true, logging:false });
+
+        // Browser-specific strategies:
+        // - iOS Safari: anchor download attribute is ignored -> open image in new tab (user long-press to save)
+        // - Android/Chrome/Firefox: try blob + anchor.download
+        // - Edge (legacy): navigator.msSaveOrOpenBlob
+        if (isIOS() && isSafari()) {
+          overlayText.textContent = 'Opening image in a new tab. Long-press to save on iPhone/Safari.';
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+          // open in new tab with safe noopener
           const w = window.open();
           if (w) {
             w.document.write(`<title>Attendance Report</title><img src="${dataUrl}" style="max-width:100%;height:auto;display:block;margin:0 auto"/>`);
             w.document.close();
-            showMessage('success', 'Report opened in a new tab. Long-press the image to save it to your device.');
+            overlay.style.display = 'none';
+            showInlineMessage('success','Report opened in new tab. Long-press the image to save.');
             return true;
           } else {
-            showMessage('error', 'Popup blocked. Please use the Download button.');
+            overlay.style.display = 'none';
+            showInlineMessage('error','Popup blocked. Please use the Download button below.');
             return false;
           }
-        } catch (e2) {
-          showMessage('error', 'Failed to auto-download report: ' + (e2 && e2.message ? e2.message : err.message));
+        }
+
+        // For other browsers: try blob & download
+        overlayText.textContent = 'Generating file for download...';
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        if (!blob) throw new Error('Failed to create blob');
+
+        // IE/Edge legacy
+        if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+          window.navigator.msSaveOrOpenBlob(blob, filename);
+          overlay.style.display = 'none';
+          showInlineMessage('success','Download started.');
+          return true;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        // Some browsers require anchor to be in DOM and a user gesture; we've already initiated this in a user-triggered flow (search -> display)
+        document.body.appendChild(a);
+
+        // Try to click. If click fails silently (some browsers), try fallback to open in new tab.
+        try {
+          a.click();
+          // best-effort cleanup
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+            a.remove();
+            overlay.style.display = 'none';
+          }, 1500);
+
+          // inform the user
+          showInlineMessage('success','Report download started. If it did not, use the Download button.');
+          return true;
+        } catch (clickErr) {
+          // fallback: open in new tab
+          try {
+            const w = window.open();
+            if (w) {
+              const reader = new FileReader();
+              reader.onload = function(e) {
+                w.document.write(`<title>Attendance Report</title><img src="${e.target.result}" style="max-width:100%;height:auto;display:block;margin:0 auto"/>`);
+                w.document.close();
+              };
+              reader.readAsDataURL(blob);
+              overlay.style.display = 'none';
+              showInlineMessage('success','Report opened in new tab. Long-press the image to save.');
+              return true;
+            } else {
+              overlay.style.display = 'none';
+              showInlineMessage('error','Popup blocked. Please tap the Download button.');
+              return false;
+            }
+          } catch (e2) {
+            overlay.style.display = 'none';
+            showInlineMessage('error','Failed to start download: ' + (e2.message||e2));
+            return false;
+          }
+        }
+      } catch (err) {
+        overlay.style.display = 'none';
+        // final fallback: try toDataURL and open in new tab
+        try {
+          const canvas2 = await html2canvas(reportEl, { scale: 1.5, useCORS: true, allowTaint: true });
+          const dataUrl = canvas2.toDataURL('image/jpeg', 0.9);
+          const w = window.open();
+          if (w) {
+            w.document.write(`<title>Attendance Report</title><img src="${dataUrl}" style="max-width:100%;height:auto;display:block;margin:0 auto"/>`);
+            w.document.close();
+            showInlineMessage('success','Report opened in a new tab. Long-press to save.');
+            return true;
+          } else {
+            showInlineMessage('error','Popup blocked. Please tap the Download button.');
+            return false;
+          }
+        } catch (finalErr) {
+          showInlineMessage('error','Failed to generate report image: ' + (finalErr.message || finalErr));
           return false;
         }
+      } finally {
+        overlay.style.display = 'none';
       }
     }
 
-    // Download button: explicit/manual download
-    document.getElementById('downloadBtn').addEventListener('click', async () => {
-      const empInfoText = (document.getElementById('empInfo').textContent || '').replace(/\s+/g, '_');
-      const filename = `${empInfoText || 'attendance_report'}_${new Date().toISOString().slice(0,10)}.jpg`;
-      try {
-        await autoDownloadReport(filename);
-      } catch (e) {
-        showMessage('error', 'Failed to generate/download report: ' + e.message);
-      }
+    // Manual download button uses the same logic
+    document.getElementById('downloadBtn').addEventListener('click', function() {
+      const empInfo = (document.getElementById('empInfo').textContent||'attendance').replace(/\s+/g,'_');
+      const filename = `${empInfo}_${new Date().toISOString().slice(0,10)}.jpg`;
+      autoDownloadReport(filename);
     });
 
-    // Back & grievance UI
-    document.getElementById('backBtn').addEventListener('click', () => {
+    // UI navigation
+    document.getElementById('backBtn').addEventListener('click', ()=> {
       document.getElementById('reportSection').style.display = 'none';
       document.getElementById('searchSection').style.display = 'block';
     });
-    document.getElementById('grievanceBtn').addEventListener('click', () => {
+    document.getElementById('grievanceBtn').addEventListener('click', ()=> {
       document.getElementById('searchSection').style.display = 'none';
       document.getElementById('grievanceSection').style.display = 'block';
     });
-    document.getElementById('backBtn2').addEventListener('click', () => {
+    document.getElementById('backBtn2').addEventListener('click', ()=> {
       document.getElementById('grievanceSection').style.display = 'none';
       document.getElementById('searchSection').style.display = 'block';
     });
 
-    // Grievance submit (same pattern as before: try fetch then JSONP)
-    document.getElementById('grievanceForm').addEventListener('submit', async (e) => {
+    // Grievance submit (GET / JSONP fallback)
+    document.getElementById('grievanceForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const btn = document.getElementById('submitGrievance');
-      const originalText = btn.textContent;
-      btn.disabled = true; btn.textContent = 'Submitting...';
-      const grievance = {
+      const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Submitting...';
+      const data = {
         empcode: document.getElementById('griev-empcode').value.trim(),
         empname: document.getElementById('griev-empname').value.trim(),
         date: document.getElementById('griev-date').value,
@@ -375,61 +438,54 @@
       };
       try {
         if (!WEB_APP_URL || WEB_APP_URL.includes('AKfy...')) {
-          showMessage('error', 'WEB_APP_URL not configured. Cannot submit grievance.');
+          showGrievanceMessage('error','WEB_APP_URL not configured. Cannot submit grievance.');
           return;
         }
+        // try fetch
         try {
-          const resp = await fetch(`${WEB_APP_URL}?action=submit_grievance&empcode=${encodeURIComponent(grievance.empcode)}&empname=${encodeURIComponent(grievance.empname)}&date=${encodeURIComponent(grievance.date)}&issue_type=${encodeURIComponent(grievance.issue_type)}&details=${encodeURIComponent(grievance.details)}`);
-          if (resp.ok) {
-            const payload = await resp.json();
-            if (payload.isOk) {
-              showMessage('success', 'Grievance submitted successfully!', 'grievanceMessage');
-              document.getElementById('grievanceForm').reset();
+          const res = await fetch(WEB_APP_URL + '?action=submit_grievance&empcode=' + encodeURIComponent(data.empcode) + '&empname=' + encodeURIComponent(data.empname) + '&date=' + encodeURIComponent(data.date) + '&issue_type=' + encodeURIComponent(data.issue_type) + '&details=' + encodeURIComponent(data.details));
+          if (res.ok) {
+            const p = await res.json();
+            if (p.isOk) {
+              showGrievanceMessage('success','Grievance submitted.');
+              this.reset();
             } else {
-              showMessage('error', 'Failed to submit grievance via web app.');
+              showGrievanceMessage('error','Failed to submit grievance.');
             }
           } else {
-            throw new Error('Non-OK response');
+            throw new Error('Non-OK');
           }
         } catch (err) {
-          await new Promise((resolve, reject) => {
+          // JSONP fallback
+          await new Promise((resolve,reject) => {
             const cb = 'cb_griev_' + Date.now();
-            window[cb] = function(response) {
+            window[cb] = function(resp) {
               try {
-                if (response && response.isOk) {
-                  showMessage('success', 'Grievance submitted successfully!', 'grievanceMessage');
-                  document.getElementById('grievanceForm').reset();
-                  resolve();
-                } else {
-                  showMessage('error', 'Failed to submit grievance via web app.', 'grievanceMessage');
-                  reject(new Error('submit failed'));
-                }
-              } catch (e) { reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
+                if (resp && resp.isOk) { showGrievanceMessage('success','Grievance submitted.'); document.getElementById('grievanceForm').reset(); resolve(); }
+                else { showGrievanceMessage('error','Failed to submit grievance.'); reject(new Error('submit failed')); }
+              } catch (e){ reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
             };
-            const script = document.createElement('script');
-            script.id = cb + '_script';
-            script.src = `${WEB_APP_URL}?action=submit_grievance&empcode=${encodeURIComponent(grievance.empcode)}&empname=${encodeURIComponent(grievance.empname)}&date=${encodeURIComponent(grievance.date)}&issue_type=${encodeURIComponent(grievance.issue_type)}&details=${encodeURIComponent(grievance.details)}&callback=${cb}`;
-            script.onerror = function(){ delete window[cb]; script.remove(); reject(new Error('JSONP failed')); };
-            document.head.appendChild(script);
+            const s = document.createElement('script');
+            s.id = cb + '_script';
+            s.src = WEB_APP_URL + '?action=submit_grievance&empcode=' + encodeURIComponent(data.empcode) + '&empname=' + encodeURIComponent(data.empname) + '&date=' + encodeURIComponent(data.date) + '&issue_type=' + encodeURIComponent(data.issue_type) + '&details=' + encodeURIComponent(data.details) + '&callback=' + cb;
+            s.onerror = function(){ delete window[cb]; s.remove(); reject(new Error('JSONP failed')); };
+            document.head.appendChild(s);
           });
         }
       } catch (e) {
-        showMessage('error', 'Failed to submit grievance: ' + e.message, 'grievanceMessage');
+        showGrievanceMessage('error','Failed to submit grievance: ' + (e.message||e));
       } finally {
-        btn.disabled = false; btn.textContent = originalText;
+        btn.disabled = false; btn.textContent = orig;
         setTimeout(()=> {
           document.getElementById('grievanceSection').style.display = 'none';
           document.getElementById('searchSection').style.display = 'block';
-        }, 1400);
+        }, 1200);
       }
     });
 
-    // Hook fetch button
-    document.getElementById('fetchDataBtn').addEventListener('click', fetchAllFromWebApp);
-
-    // Keep the data-source label generic (do not show the raw web app URL)
-    (function init() {
-      document.getElementById('dataSourceInfo').textContent = `🌐 Data Source: Google Apps Script Web App`;
+    // small initialization
+    (function init(){
+      document.getElementById('dataSourceInfo').textContent = '🌐 Data Source: Google Apps Script Web App';
     })();
   </script>
 </body>
