@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Employee Attendance Portal</title>
+  <title>Employee Attendance Portal — ITC SHUTDOWN 2025</title>
 
-  <!-- html2canvas -->
+  <!-- html2canvas for client-side capture -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5wZ3zXq4+ZbJgXn1xvB2p1mS2k3gQYwX3qz2m1y1q9/0+UoI8V2zKp1cw5wX1R3lD7k1O4wzI7Yt9G1mBg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <style>
@@ -33,18 +33,23 @@
     /* overlay for progress */
     #downloadOverlay{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:9999}
     #downloadOverlay .box{background:#fff;padding:16px;border-radius:8px;max-width:90%;text-align:center}
+    /* hide raw data-source completely */
+    .data-source-info{display:none!important}
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <h1>Employee Attendance Portal</h1>
-      <div id="company-name" style="font-size:13px;color:#666">Your Company Name</div>
+      <!-- Company name required by user -->
+      <div id="company-name" style="font-size:13px;color:#666;font-weight:700">ITC SHUTDOWN 2025</div>
     </div>
 
     <div class="search-section" id="searchSection">
       <h2 style="font-size:16px;margin:0 0 8px 0">Search Attendance</h2>
-      <div id="dataSourceInfo" style="font-size:13px;color:#444;margin-bottom:12px">🌐 Data Source: Google Apps Script Web App</div>
+
+      <!-- data source hidden entirely (per request) -->
+      <div class="data-source-info" id="dataSourceInfo">hidden</div>
 
       <div class="search-group">
         <label for="empcode">Enter Employee Code</label>
@@ -52,16 +57,17 @@
       </div>
 
       <button id="searchBtn" class="btn btn-primary">View My Attendance</button>
-      <button id="fetchDataBtn" class="btn btn-info">Fetch Latest Attendance (from Web App)</button>
+      <button id="fetchDataBtn" class="btn btn-info">Fetch Latest Attendance</button>
       <button id="grievanceBtn" class="btn btn-info">Report Missing / OT</button>
-      <div id="inlineMessage" class="message"></div>
+
+      <div id="inlineMessage" class="message" style="margin-top:8px;"></div>
     </div>
 
     <div class="report-section" id="reportSection" style="display:none">
       <button id="backBtn" class="back-btn">← Back to Search</button>
 
       <div id="reportHeader" style="text-align:center;margin-bottom:12px">
-        <div id="report-company" style="font-weight:700;color:#667eea">Your Company Name</div>
+        <div id="report-company" style="font-weight:700;color:#667eea">ITC SHUTDOWN 2025</div>
         <div id="empInfo" style="color:#333;margin-top:6px"></div>
       </div>
 
@@ -83,7 +89,7 @@
 
       <div style="margin-top:12px">
         <button id="downloadBtn" class="btn btn-secondary">Download Report (JPG)</button>
-        <div class="download-hint" id="downloadHint">If the download doesn't start automatically, tap the button above. On iPhone/Safari the image will open in a new tab — long-press to save.</div>
+        <div class="download-hint" id="downloadHint">If auto-download is blocked, the report will open in a new tab - long-press to save on mobile.</div>
       </div>
     </div>
 
@@ -117,24 +123,19 @@
     </div>
   </div>
 
-  <!-- overlay used during download generation -->
+  <!-- overlay while generating image -->
   <div id="downloadOverlay"><div class="box"><div id="downloadOverlayText">Generating report...</div></div></div>
 
   <script>
-    // Replace with your deployed Apps Script Web App URL (do not show it in UI)
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec'; // <-- set this (keeps hidden)
+    // Keep the Apps Script web app URL hidden (do NOT render it in UI).
+    // Replace this value with your deployed Apps Script URL (no UI exposure).
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec'; // <-- set your URL here
 
-    // state
     let externalDataCache = [];
+    // Reference to a window opened during the search user gesture (to avoid popup blocking)
+    let gestureWindowRef = null;
 
-    // ---------- utilities ----------
-    function isIOS() {
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    }
-    function isSafari() {
-      const ua = navigator.userAgent;
-      return /Safari/.test(ua) && !/Chrome|Chromium|Android/.test(ua);
-    }
+    // ---------- helper UI ----------
     function showInlineMessage(type, text, timeout = 4000) {
       const el = document.getElementById('inlineMessage');
       el.className = 'message ' + (type || '');
@@ -150,33 +151,39 @@
       setTimeout(()=> el.style.display = 'none', timeout);
     }
 
-    // ---------- fetch helpers ----------
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    function isSafari() {
+      const ua = navigator.userAgent;
+      return /Safari/.test(ua) && !/Chrome|Chromium|Android/.test(ua);
+    }
+
+    // ---------- fetching from Web App ----------
     async function fetchAllFromWebApp() {
       if (!WEB_APP_URL || WEB_APP_URL.includes('AKfy...')) {
         showInlineMessage('error','WEB_APP_URL not configured. Edit the HTML to set WEB_APP_URL.');
         return;
       }
       const btn = document.getElementById('fetchDataBtn');
-      const originalText = btn.textContent;
-      btn.disabled = true; btn.textContent = 'Fetching...';
+      const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Fetching...';
       try {
-        // try CORS fetch
         const res = await fetch(WEB_APP_URL + '?action=all');
         if (res.ok) {
           const payload = await res.json();
           externalDataCache = Array.isArray(payload.data) ? payload.data : (Array.isArray(payload) ? payload : []);
-          showInlineMessage('success', `Fetched ${externalDataCache.length} records.`);
+          showInlineMessage('success','Fetched ' + (externalDataCache.length||0) + ' records.');
           return;
         }
-        throw new Error('non-ok response');
+        throw new Error('non-ok');
       } catch (err) {
         // JSONP fallback
         try {
-          await new Promise((resolve, reject) => {
+          await new Promise((resolve,reject) => {
             const cb = 'cb_all_' + Date.now();
-            window[cb] = function(response) {
+            window[cb] = function(resp) {
               try {
-                externalDataCache = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
+                externalDataCache = Array.isArray(resp.data) ? resp.data : (Array.isArray(resp) ? resp : []);
                 resolve();
               } catch (e) { reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
             };
@@ -186,27 +193,37 @@
             s.onerror = function(){ delete window[cb]; s.remove(); reject(new Error('JSONP failed')); };
             document.head.appendChild(s);
           });
-          showInlineMessage('success', `Fetched ${externalDataCache.length} records (JSONP).`);
-        } catch (e) {
-          showInlineMessage('error','Failed to fetch data: ' + (e.message || e));
+          showInlineMessage('success','Fetched ' + (externalDataCache.length||0) + ' records (JSONP).');
+        } catch (e2) {
+          showInlineMessage('error','Failed to fetch data: ' + (e2.message||e2));
         }
       } finally {
-        btn.disabled = false; btn.textContent = originalText;
+        btn.disabled = false; btn.textContent = orig;
       }
     }
 
-    // ---------- search & display ----------
+    // ---------- search handling ----------
     document.getElementById('fetchDataBtn').addEventListener('click', fetchAllFromWebApp);
 
-    document.getElementById('searchBtn').addEventListener('click', async function() {
-      const empcode = (document.getElementById('empcode').value || '').trim().toUpperCase();
-      if (!empcode) { showInlineMessage('error','Please enter employee code'); return; }
-      this.disabled = true; const orig = this.textContent; this.textContent = 'Searching...';
+    document.getElementById('searchBtn').addEventListener('click', async function onSearchClick(e) {
+      // Open a blank window synchronously in the user gesture so it won't be blocked.
+      // We'll fill it later with the generated image or fallback content.
+      gestureWindowRef = window.open('', '_blank'); // may be null if popup blocked
 
+      const empcode = (document.getElementById('empcode').value || '').trim().toUpperCase();
+      if (!empcode) {
+        if (gestureWindowRef) { gestureWindowRef.close(); gestureWindowRef = null; }
+        showInlineMessage('error','Please enter employee code'); 
+        return;
+      }
+
+      this.disabled = true; const origText = this.textContent; this.textContent = 'Searching...';
+
+      // look in local cache first
       let results = (externalDataCache || []).filter(r => (r.empcode || '').toString().toUpperCase() === empcode);
 
+      // if none in cache, fetch employee endpoint
       if ((!results || results.length === 0) && WEB_APP_URL && !WEB_APP_URL.includes('AKfy...')) {
-        // try server-side employee endpoint
         try {
           const res = await fetch(WEB_APP_URL + '?action=employee&empcode=' + encodeURIComponent(empcode));
           if (res.ok) {
@@ -220,7 +237,7 @@
                 try {
                   results = Array.isArray(resp.data) ? resp.data : (Array.isArray(resp) ? resp : []);
                   resolve();
-                } catch (e){ reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
+                } catch (e) { reject(e); } finally { delete window[cb]; const s = document.getElementById(cb + '_script'); if (s) s.remove(); }
               };
               const s = document.createElement('script');
               s.id = cb + '_script';
@@ -229,22 +246,28 @@
               document.head.appendChild(s);
             });
           }
-        } catch (e) {
-          console.warn('employee fetch error', e);
+        } catch (err) {
+          console.warn('employee fetch error', err);
         }
       }
 
-      this.disabled = false; this.textContent = orig;
+      this.disabled = false; this.textContent = origText;
 
       if (!results || results.length === 0) {
+        if (gestureWindowRef) { // close the opened window if nothing to show
+          gestureWindowRef.document.write('<p style="font-family:sans-serif;padding:20px">No records found.</p>');
+          setTimeout(()=> { try { gestureWindowRef.close(); } catch(e){}; gestureWindowRef = null; }, 1000);
+        }
         showInlineMessage('error','No attendance records found for this employee code');
         return;
       }
 
-      displayReport(results);
+      // Display report and then render to image into the previously opened gestureWindowRef (if available).
+      displayReport(results, gestureWindowRef);
+      // gestureWindowRef will be consumed/closed in the image generation routine
     });
 
-    function displayReport(records) {
+    function displayReport(records, winRef) {
       document.getElementById('searchSection').style.display = 'none';
       document.getElementById('reportSection').style.display = 'block';
 
@@ -257,18 +280,21 @@
       const listHtml = records.map(r => {
         const inT = (r.in_time || r.IN || r['IN'] || '');
         const outT = (r.out_time || r.OUT || r['OUT'] || '');
-        totalOT += calculateOT(inT, outT);
+        const ot = calculateOT(inT,outT);
+        totalOT += ot;
         const d = `${r.shdate||r.SHDATE||''}/${r.shmonth||r.SHM||r.SHMONT||''}/${r.shyear||r.SHYEAR||''}`;
-        return `<div class="attendance-item"><div style="font-weight:700">${d}</div><div style="margin-top:6px;display:flex;justify-content:space-between"><div>🕐 IN: ${inT}</div><div>🕐 OUT: ${outT}</div></div>${calculateOT(inT,outT)>0?'<div style="margin-top:6px;color:#667eea;font-weight:700">⏱️ OT: '+calculateOT(inT,outT).toFixed(1)+' hours</div>':''}</div>`;
+        return `<div class="attendance-item"><div style="font-weight:700">${d}</div><div style="margin-top:6px;display:flex;justify-content:space-between"><div>🕐 IN: ${inT}</div><div>🕐 OUT: ${outT}</div></div>${ot>0?'<div style="margin-top:6px;color:#667eea;font-weight:700">⏱️ OT: '+ot.toFixed(1)+' hours</div>':''}</div>`;
       }).join('');
       document.getElementById('attendanceList').innerHTML = listHtml;
       document.getElementById('totalPresent').textContent = totalPresent;
       document.getElementById('totalOT').textContent = totalOT.toFixed(1);
 
-      // Attempt auto-download, but use detection & robust fallbacks.
-      const filename = `${(empcode||'attendance')}_${(empname||'report').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.jpg`;
-      // small delay to allow render
-      setTimeout(()=> { autoDownloadReport(filename); }, 600);
+      // Build filename
+      const safeName = ((empcode||'attendance') + '_' + (empname||'report')).replace(/\s+/g,'_').replace(/[^\w\-_.]/g,'');
+      const filename = `${safeName}_${new Date().toISOString().slice(0,10)}.jpg`;
+
+      // Generate image and populate the previously opened window (winRef) to avoid popup blockers.
+      generateImageAndDeliver(document.getElementById('reportSection'), filename, winRef);
     }
 
     function calculateOT(inTime, outTime) {
@@ -283,49 +309,91 @@
       return Math.max(0, hours - 12);
     }
 
-    // ---------- improved auto download with multiple fallbacks ----------
-    async function autoDownloadReport(filename) {
+    // ---------- robust image generation + delivery ----------
+    // Strategy:
+    // 1) If a window reference (opened during the user gesture) is available, write the image into that window and trigger a click on an anchor with download attribute.
+    //    - This avoids popup blockers because the window was opened synchronously by the user's click.
+    // 2) If no window ref (popup blocked), attempt blob+anchor in current window (works on Android/Chrome).
+    // 3) For iOS/Safari, open the image in a new tab and let user long-press to save (download attribute ignored on Safari iOS).
+    async function generateImageAndDeliver(element, filename, winRef) {
       const overlay = document.getElementById('downloadOverlay');
       const overlayText = document.getElementById('downloadOverlayText');
       overlayText.textContent = 'Preparing report image...';
       overlay.style.display = 'flex';
 
-      const reportEl = document.getElementById('reportSection');
-
       try {
-        // Use a slightly higher scale for clarity on phones
         const scale = Math.min(window.devicePixelRatio || 2, 3);
-        const canvas = await html2canvas(reportEl, { scale: scale, useCORS: true, allowTaint: true, logging:false });
+        const canvas = await html2canvas(element, { scale: scale, useCORS: true, allowTaint: true, logging:false });
 
-        // Browser-specific strategies:
-        // - iOS Safari: anchor download attribute is ignored -> open image in new tab (user long-press to save)
-        // - Android/Chrome/Firefox: try blob + anchor.download
-        // - Edge (legacy): navigator.msSaveOrOpenBlob
-        if (isIOS() && isSafari()) {
-          overlayText.textContent = 'Opening image in a new tab. Long-press to save on iPhone/Safari.';
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-          // open in new tab with safe noopener
-          const w = window.open();
-          if (w) {
-            w.document.write(`<title>Attendance Report</title><img src="${dataUrl}" style="max-width:100%;height:auto;display:block;margin:0 auto"/>`);
-            w.document.close();
+        // Preferred: use the window opened during gesture (winRef) to deliver the image and click the download link inside it.
+        if (winRef && !winRef.closed) {
+          try {
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+            const url = URL.createObjectURL(blob);
+            // Write a small HTML page into the window that immediately triggers the download anchor click and shows the image as fallback.
+            const html = `
+              <!doctype html>
+              <html>
+              <head><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+              <body style="margin:0;font-family:Segoe UI,Roboto,Arial">
+                <div style="padding:16px;text-align:center">
+                  <p style="font-weight:700;margin:0 0 8px 0">Attendance Report</p>
+                  <img src="${url}" style="max-width:100%;height:auto;display:block;margin:8px auto"/>
+                  <p style="font-size:13px;color:#333;margin:8px 0 0 0">If download does not start automatically, long-press the image to save.</p>
+                </div>
+                <a id="dl" href="${url}" download="${filename}" style="display:none"></a>
+                <script>
+                  (function(){
+                    try{ document.getElementById('dl').click(); }catch(e){}
+                    // revoke object URL after some time
+                    setTimeout(()=>{ try{ URL.revokeObjectURL('${url}'); }catch(e){} },3000);
+                  })();
+                </script>
+              </body>
+              </html>`;
+            winRef.document.open();
+            winRef.document.write(html);
+            winRef.document.close();
             overlay.style.display = 'none';
-            showInlineMessage('success','Report opened in new tab. Long-press the image to save.');
+            showInlineMessage('success','Report delivered. If it did not save automatically, use long-press on the image.');
+            // clear the reference (we used it)
+            gestureWindowRef = null;
             return true;
-          } else {
-            overlay.style.display = 'none';
-            showInlineMessage('error','Popup blocked. Please use the Download button below.');
-            return false;
+          } catch (winErr) {
+            // if writing fails, continue to other strategies
+            console.warn('winRef delivery failed', winErr);
           }
         }
 
-        // For other browsers: try blob & download
-        overlayText.textContent = 'Generating file for download...';
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-        if (!blob) throw new Error('Failed to create blob');
+        // If we get here, either winRef wasn't available or failed. Use other strategies.
 
-        // IE/Edge legacy
+        // iOS Safari: open in new tab with the image (download attribute ignored)
+        if (isIOS() && isSafari()) {
+          try {
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+            const newWin = window.open();
+            if (newWin) {
+              newWin.document.write(`<title>Attendance Report</title><img src="${dataUrl}" style="max-width:100%;height:auto;display:block;margin:0 auto"/><p style="text-align:center;font-size:13px">Long-press the image to save.</p>`);
+              newWin.document.close();
+              overlay.style.display = 'none';
+              showInlineMessage('success','Report opened in a new tab. Long-press the image to save.');
+              return true;
+            } else {
+              overlay.style.display = 'none';
+              showInlineMessage('error','Popup blocked. Please tap "Download Report (JPG)".');
+              return false;
+            }
+          } catch (err) {
+            console.warn('iOS fallback failed', err);
+          }
+        }
+
+        // For other browsers: blob + anchor.download (preferred)
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        if (!blob) throw new Error('Failed to create image blob');
+
         if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+          // IE/Edge legacy
           window.navigator.msSaveOrOpenBlob(blob, filename);
           overlay.style.display = 'none';
           showInlineMessage('success','Download started.');
@@ -336,57 +404,25 @@
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
+        // Append to DOM so click works in some browsers
         a.style.display = 'none';
-        // Some browsers require anchor to be in DOM and a user gesture; we've already initiated this in a user-triggered flow (search -> display)
         document.body.appendChild(a);
+        a.click();
+        // cleanup
+        setTimeout(()=> { URL.revokeObjectURL(url); a.remove(); }, 1500);
+        overlay.style.display = 'none';
+        showInlineMessage('success','Download started. If not, tap Download Report (JPG).');
+        return true;
 
-        // Try to click. If click fails silently (some browsers), try fallback to open in new tab.
-        try {
-          a.click();
-          // best-effort cleanup
-          setTimeout(() => {
-            URL.revokeObjectURL(url);
-            a.remove();
-            overlay.style.display = 'none';
-          }, 1500);
-
-          // inform the user
-          showInlineMessage('success','Report download started. If it did not, use the Download button.');
-          return true;
-        } catch (clickErr) {
-          // fallback: open in new tab
-          try {
-            const w = window.open();
-            if (w) {
-              const reader = new FileReader();
-              reader.onload = function(e) {
-                w.document.write(`<title>Attendance Report</title><img src="${e.target.result}" style="max-width:100%;height:auto;display:block;margin:0 auto"/>`);
-                w.document.close();
-              };
-              reader.readAsDataURL(blob);
-              overlay.style.display = 'none';
-              showInlineMessage('success','Report opened in new tab. Long-press the image to save.');
-              return true;
-            } else {
-              overlay.style.display = 'none';
-              showInlineMessage('error','Popup blocked. Please tap the Download button.');
-              return false;
-            }
-          } catch (e2) {
-            overlay.style.display = 'none';
-            showInlineMessage('error','Failed to start download: ' + (e2.message||e2));
-            return false;
-          }
-        }
       } catch (err) {
         overlay.style.display = 'none';
-        // final fallback: try toDataURL and open in new tab
+        // final fallback: open in new tab
         try {
-          const canvas2 = await html2canvas(reportEl, { scale: 1.5, useCORS: true, allowTaint: true });
+          const canvas2 = await html2canvas(element, { scale: 1.5, useCORS: true, allowTaint: true });
           const dataUrl = canvas2.toDataURL('image/jpeg', 0.9);
           const w = window.open();
           if (w) {
-            w.document.write(`<title>Attendance Report</title><img src="${dataUrl}" style="max-width:100%;height:auto;display:block;margin:0 auto"/>`);
+            w.document.write(`<title>Attendance Report</title><img src="${dataUrl}" style="max-width:100%;height:auto;display:block;margin:0 auto"/><p style="text-align:center">Long-press the image to save.</p>`);
             w.document.close();
             showInlineMessage('success','Report opened in a new tab. Long-press to save.');
             return true;
@@ -399,32 +435,22 @@
           return false;
         }
       } finally {
-        overlay.style.display = 'none';
+        // ensure gestureWindowRef cleaned up if still present (we may keep it so user can interact)
+        try { if (gestureWindowRef && !gestureWindowRef.closed) { /* keep open for user */ } } catch(e){}
       }
     }
 
-    // Manual download button uses the same logic
+    // Manual download button uses the same routine but since click is a user gesture if popup blocked we can open a window now
     document.getElementById('downloadBtn').addEventListener('click', function() {
-      const empInfo = (document.getElementById('empInfo').textContent||'attendance').replace(/\s+/g,'_');
+      // open a window in the click gesture to make delivery reliable
+      const win = window.open('', '_blank');
+      // build safe file name
+      const empInfo = (document.getElementById('empInfo').textContent||'attendance').replace(/\s+/g,'_').replace(/[^\w\-_.]/g,'');
       const filename = `${empInfo}_${new Date().toISOString().slice(0,10)}.jpg`;
-      autoDownloadReport(filename);
+      generateImageAndDeliver(document.getElementById('reportSection'), filename, win);
     });
 
-    // UI navigation
-    document.getElementById('backBtn').addEventListener('click', ()=> {
-      document.getElementById('reportSection').style.display = 'none';
-      document.getElementById('searchSection').style.display = 'block';
-    });
-    document.getElementById('grievanceBtn').addEventListener('click', ()=> {
-      document.getElementById('searchSection').style.display = 'none';
-      document.getElementById('grievanceSection').style.display = 'block';
-    });
-    document.getElementById('backBtn2').addEventListener('click', ()=> {
-      document.getElementById('grievanceSection').style.display = 'none';
-      document.getElementById('searchSection').style.display = 'block';
-    });
-
-    // Grievance submit (GET / JSONP fallback)
+    // ---------- grievance handling ----------
     document.getElementById('grievanceForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const btn = document.getElementById('submitGrievance');
@@ -441,7 +467,6 @@
           showGrievanceMessage('error','WEB_APP_URL not configured. Cannot submit grievance.');
           return;
         }
-        // try fetch
         try {
           const res = await fetch(WEB_APP_URL + '?action=submit_grievance&empcode=' + encodeURIComponent(data.empcode) + '&empname=' + encodeURIComponent(data.empname) + '&date=' + encodeURIComponent(data.date) + '&issue_type=' + encodeURIComponent(data.issue_type) + '&details=' + encodeURIComponent(data.details));
           if (res.ok) {
@@ -483,9 +508,26 @@
       }
     });
 
-    // small initialization
+    // ---------- navigation ----------
+    document.getElementById('backBtn').addEventListener('click', ()=> {
+      document.getElementById('reportSection').style.display = 'none';
+      document.getElementById('searchSection').style.display = 'block';
+    });
+    document.getElementById('grievanceBtn').addEventListener('click', ()=> {
+      document.getElementById('searchSection').style.display = 'none';
+      document.getElementById('grievanceSection').style.display = 'block';
+    });
+    document.getElementById('backBtn2').addEventListener('click', ()=> {
+      document.getElementById('grievanceSection').style.display = 'none';
+      document.getElementById('searchSection').style.display = 'block';
+    });
+
+    // Initialize: ensure data-source label is hidden and company name set
     (function init(){
-      document.getElementById('dataSourceInfo').textContent = '🌐 Data Source: Google Apps Script Web App';
+      // hide data source element completely
+      const ds = document.getElementById('dataSourceInfo'); if (ds) ds.style.display = 'none';
+      document.getElementById('company-name').textContent = 'ITC SHUTDOWN 2025';
+      document.getElementById('report-company').textContent = 'ITC SHUTDOWN 2025';
     })();
   </script>
 </body>
