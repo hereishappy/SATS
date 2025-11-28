@@ -354,6 +354,9 @@
   </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+
+  <!-- html2canvas for client-side capture -> generate JPG on phone -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5wZ3zXq4+ZbJgXn1xvB2p1mS2k3gQYwX3qz2m1y1q9/0+UoI8V2zKp1cw5wX1R3lD7k1O4wzI7Yt9G1mBg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
  </head>
  <body>
   <div class="container">
@@ -366,11 +369,25 @@
     <div class="data-source-info" id="dataSourceInfo">
      📊 Data Source: Canva Sheet Storage
     </div>
+
+    <!-- Web App URL area: paste your Google Apps Script Web App URL here (optional).
+         If provided, the app will fetch data from your Google Sheet web app (JSONP-safe). -->
+    <div class="search-group">
+      <label for="webAppUrl">Paste your Google Apps Script Web App URL (optional)</label>
+      <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec">
+      <button class="btn btn-secondary" id="connectWebAppBtn" style="margin-top:8px;">Connect Web App</button>
+    </div>
+
     <div class="search-group"><label for="empcode" id="search-label">Enter Employee Code</label> <input type="text" id="empcode" placeholder="e.g., EMP001">
-    </div><button class="btn btn-primary" id="searchBtn">View My Attendance</button> <button class="btn btn-info" id="fetchDataBtn" style="display: none;">Fetch Data from URL</button> <button class="btn btn-secondary" id="grievanceBtn">Report Missing Attendance</button>
+    </div>
+
+    <button class="btn btn-primary" id="searchBtn">View My Attendance</button>
+    <button class="btn btn-info" id="fetchDataBtn" style="display: none;">Fetch Data from URL</button>
+    <button class="btn btn-info" id="grievanceBtn">Report Missing / OT</button>
    </div>
+
    <div class="report-section" id="reportSection"><button class="back-btn" id="backBtn">← Back to Search</button>
-    <div class="report-header">
+    <div class="report-header" id="reportHeader">
      <h2 id="report-company">Your Company Name</h2>
      <div class="emp-info" id="empInfo"></div>
     </div>
@@ -397,6 +414,7 @@
      <div id="attendanceList"></div>
     </div>
    </div>
+
    <div class="grievance-section" id="grievanceSection"><button class="back-btn" id="backBtn2">← Back to Search</button>
     <h2>Report Missing Attendance / OT</h2>
     <div class="message" id="grievanceMessage"></div>
@@ -414,7 +432,9 @@
     </form>
    </div>
   </div>
+
   <script>
+    // default config (used by elementSdk or fallback)
     const defaultConfig = {
       app_title: "Employee Attendance Portal",
       company_name: "Your Company Name",
@@ -429,9 +449,10 @@
       font_size: 16
     };
 
-    let attendanceRecords = [];
+    let attendanceRecords = [];    // from Canva Sheet / elementSdk data
     let grievanceRecords = [];
-    let externalDataCache = [];
+    let externalDataCache = [];    // from pasted web app URL / external fetch
+    let connectedWebAppUrl = '';   // user-pasted web app URL
 
     const dataHandler = {
       onDataChanged(data) {
@@ -442,12 +463,16 @@
     };
 
     async function initializeApp() {
-      const initResult = await window.dataSdk.init(dataHandler);
-      if (!initResult.isOk) {
-        console.error("Failed to initialize data SDK");
+      // initialize data SDK if present
+      if (window.dataSdk && window.dataSdk.init) {
+        const initResult = await window.dataSdk.init(dataHandler);
+        if (!initResult.isOk) {
+          console.error("Failed to initialize data SDK");
+        }
       }
-      
-      if (window.elementSdk) {
+
+      // elementSdk config handling
+      if (window.elementSdk && window.elementSdk.init) {
         await window.elementSdk.init({
           defaultConfig,
           onConfigChange: async (config) => {
@@ -468,18 +493,22 @@
             document.getElementById('report-company').textContent = companyName;
             document.getElementById('search-label').textContent = searchLabel;
 
-            // Update data source UI
             const fetchBtn = document.getElementById('fetchDataBtn');
             const dataSourceInfo = document.getElementById('dataSourceInfo');
-            
+
             if (dataSourceUrl && dataSourceUrl.trim() !== '') {
               fetchBtn.style.display = 'block';
               dataSourceInfo.innerHTML = '🌐 Data Source: External URL + Canva Sheet';
               dataSourceInfo.classList.add('external');
+              // set the paste box value too
+              document.getElementById('webAppUrl').value = dataSourceUrl;
+              connectedWebAppUrl = dataSourceUrl;
+              fetchBtn.textContent = 'Fetch Data from Web App';
             } else {
               fetchBtn.style.display = 'none';
               dataSourceInfo.innerHTML = '📊 Data Source: Canva Sheet Storage';
               dataSourceInfo.classList.remove('external');
+              connectedWebAppUrl = '';
             }
 
             document.body.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
@@ -580,13 +609,27 @@
       }
     }
 
-    // Fetch data from external URL
-    document.getElementById('fetchDataBtn').addEventListener('click', async () => {
-      const config = window.elementSdk ? window.elementSdk.config : defaultConfig;
-      const dataSourceUrl = config.data_source_url || defaultConfig.data_source_url;
+    // Connect button for pasted web app URL
+    document.getElementById('connectWebAppBtn').addEventListener('click', () => {
+      const url = document.getElementById('webAppUrl').value.trim();
+      if (!url) {
+        showMessage('error', 'Please paste your Web App URL (from Google Apps Script).');
+        return;
+      }
+      connectedWebAppUrl = url;
+      document.getElementById('fetchDataBtn').style.display = 'block';
+      document.getElementById('dataSourceInfo').innerHTML = '🌐 Data Source: External Web App + Canva Sheet';
+      document.getElementById('dataSourceInfo').classList.add('external');
+      showMessage('success', 'Web App URL saved. Click "Fetch Data from URL" to load attendance records.');
+    });
 
-      if (!dataSourceUrl || dataSourceUrl.trim() === '') {
-        showMessage('error', 'No data source URL configured');
+    // Fetch data from external URL (tries normal fetch then JSONP fallback)
+    document.getElementById('fetchDataBtn').addEventListener('click', async () => {
+      // prefer the connected web app url, otherwise try config
+      const urlFromInput = document.getElementById('webAppUrl').value.trim();
+      const url = urlFromInput || connectedWebAppUrl || (window.elementSdk && window.elementSdk.config && window.elementSdk.config.data_source_url) || '';
+      if (!url) {
+        showMessage('error', 'No data source URL configured. Paste your Google Apps Script Web App URL above.');
         return;
       }
 
@@ -596,35 +639,61 @@
       btn.innerHTML = 'Fetching... <span class="loading"></span>';
 
       try {
-        const response = await fetch(dataSourceUrl);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        // Validate and cache external data
-        if (Array.isArray(data)) {
-          externalDataCache = data.filter(record => 
-            record.empcode && record.empname && record.in_time && record.out_time
-          );
-          showMessage('success', `Successfully fetched ${externalDataCache.length} attendance records from external source`);
+        // Try normal fetch first (works if web app allows CORS)
+        const response = await fetch(`${url}?action=all`);
+        if (response.ok) {
+          const data = await response.json();
+          // If it looks like our wrapped response (isOk/data)
+          externalDataCache = Array.isArray(data) ? data : (data.data || []);
+          showMessage('success', `Fetched ${externalDataCache.length} records from web app.`);
         } else {
-          throw new Error('Invalid data format. Expected an array of attendance records.');
+          // fallback to JSONP approach
+          throw new Error('CORS or non-OK response - falling back to JSONP');
         }
+      } catch (err) {
+        // JSONP fallback for Google Apps Script web app (it supports callback wrapper)
+        try {
+          await new Promise((resolve, reject) => {
+            const callbackName = 'handleExternalData_' + Date.now();
+            window[callbackName] = function(response) {
+              try {
+                externalDataCache = response && response.data ? response.data : (Array.isArray(response) ? response : []);
+                showMessage('success', `Fetched ${externalDataCache.length} records via JSONP.`);
+                resolve();
+              } catch (e) {
+                reject(e);
+              } finally {
+                // cleanup
+                delete window[callbackName];
+                const scriptEl = document.getElementById(callbackName + '_script');
+                if (scriptEl) scriptEl.remove();
+              }
+            };
 
-      } catch (error) {
-        showMessage('error', `Failed to fetch data: ${error.message}`);
+            // append script tag
+            const script = document.createElement('script');
+            script.id = callbackName + '_script';
+            script.src = `${url}?action=all&callback=${callbackName}`;
+            script.onerror = function(e) {
+              delete window[callbackName];
+              script.remove();
+              reject(new Error('JSONP request failed'));
+            };
+            document.head.appendChild(script);
+          });
+        } catch (jsonpErr) {
+          showMessage('error', 'Failed to fetch data from web app: ' + jsonpErr.message);
+        }
       } finally {
         btn.disabled = false;
         btn.textContent = originalText;
       }
     });
 
+    // Search by empcode (combines local attendanceRecords + externalDataCache)
     document.getElementById('searchBtn').addEventListener('click', async () => {
       const empcode = document.getElementById('empcode').value.trim().toUpperCase();
-      
+
       if (!empcode) {
         showMessage('error', 'Please enter an employee code');
         return;
@@ -637,18 +706,68 @@
 
       // Combine records from Canva Sheet and external cache
       const combinedRecords = [...attendanceRecords, ...externalDataCache];
-      
+
       // Filter records for this employee
-      const employeeRecords = combinedRecords.filter(record => 
-        record.empcode.toUpperCase() === empcode
+      const employeeRecords = combinedRecords.filter(record =>
+        (record.empcode || '').toString().toUpperCase() === empcode
       );
 
       btn.disabled = false;
       btn.textContent = originalText;
 
       if (employeeRecords.length === 0) {
-        showMessage('error', 'No attendance records found for this employee code');
-        return;
+        // Try to query web app directly for this employee (if URL present)
+        if (connectedWebAppUrl) {
+          try {
+            // try fetch with CORS
+            const resp = await fetch(`${connectedWebAppUrl}?action=employee&empcode=${encodeURIComponent(empcode)}`);
+            if (resp.ok) {
+              const payload = await resp.json();
+              const data = payload.data || payload;
+              if (Array.isArray(data) && data.length > 0) {
+                displayReport(data);
+                return;
+              }
+            }
+            // if not ok - try JSONP
+            await new Promise((resolve, reject) => {
+              const callbackName = 'handleEmployeeData_' + Date.now();
+              window[callbackName] = function(response) {
+                try {
+                  const data = response && response.data ? response.data : (Array.isArray(response) ? response : []);
+                  if (data.length > 0) {
+                    displayReport(data);
+                    resolve();
+                  } else {
+                    reject(new Error('No records found'));
+                  }
+                } catch (e) {
+                  reject(e);
+                } finally {
+                  delete window[callbackName];
+                  const scriptEl = document.getElementById(callbackName + '_script');
+                  if (scriptEl) scriptEl.remove();
+                }
+              };
+              const script = document.createElement('script');
+              script.id = callbackName + '_script';
+              script.src = `${connectedWebAppUrl}?action=employee&empcode=${encodeURIComponent(empcode)}&callback=${callbackName}`;
+              script.onerror = function() {
+                delete window[callbackName];
+                script.remove();
+                reject(new Error('JSONP failed'));
+              };
+              document.head.appendChild(script);
+            });
+            return;
+          } catch (err) {
+            showMessage('error', 'No attendance records found for this employee code');
+            return;
+          }
+        } else {
+          showMessage('error', 'No attendance records found for this employee code');
+          return;
+        }
       }
 
       displayReport(employeeRecords);
@@ -658,8 +777,8 @@
       document.getElementById('searchSection').style.display = 'none';
       document.getElementById('reportSection').style.display = 'block';
 
-      const empcode = records[0].empcode;
-      const empname = records[0].empname;
+      const empcode = records[0].empcode || records[0].EMPCODE || '';
+      const empname = records[0].empname || records[0].EMPNAME || '';
 
       document.getElementById('empInfo').innerHTML = `
         <strong>${empname}</strong> (${empcode})
@@ -670,7 +789,7 @@
       let totalOTHours = 0;
 
       records.forEach(record => {
-        const otHours = calculateOT(record.in_time, record.out_time);
+        const otHours = calculateOT(record.in_time || record.IN || record['IN'], record.out_time || record.OUT || record['OUT']);
         totalOTHours += otHours;
       });
 
@@ -679,15 +798,22 @@
 
       // Display attendance list
       const listHtml = records.map(record => {
-        const otHours = calculateOT(record.in_time, record.out_time);
-        const date = `${record.shdate}/${record.shmonth}/${record.shyear}`;
-        
+        const inTime = record.in_time || record.IN || record['IN'] || '';
+        const outTime = record.out_time || record.OUT || record['OUT'] || '';
+        const otHours = calculateOT(inTime, outTime);
+        const date = `${record.shdate || record.SHDATE || ''}/${record.shmonth || record.SHMONT || record.SHMONT || record.SHM ? record.shmonth : (record.SHMONT||record.SHM)}/${record.shyear || record.SHYEAR || ''}`;
+
+        const shdate = (record.shdate || record.SHDATE || record['SHDATE'] || '');
+        const shmonth = (record.shmonth || record.SHM || record['SHMONTH'] || '');
+        const shyear = (record.shyear || record.SHYEAR || record['SHYEAR'] || '');
+        const formattedDate = `${shdate}/${shmonth}/${shyear}`;
+
         return `
           <div class="attendance-item">
-            <div class="date">${date}</div>
+            <div class="date">${formattedDate}</div>
             <div class="times">
-              <span>🕐 IN: ${record.in_time}</span>
-              <span>🕐 OUT: ${record.out_time}</span>
+              <span>🕐 IN: ${inTime}</span>
+              <span>🕐 OUT: ${outTime}</span>
             </div>
             ${otHours > 0 ? `<div style="margin-top: 6px; color: #667eea; font-size: 13px; font-weight: 600;">⏱️ OT: ${otHours.toFixed(1)} hours</div>` : ''}
           </div>
@@ -695,6 +821,33 @@
       }).join('');
 
       document.getElementById('attendanceList').innerHTML = listHtml;
+
+      // After report is shown, auto-capture it as JPG and trigger download (mobile friendly).
+      // We capture only the inner report content (reportSection).
+      setTimeout(async () => {
+        try {
+          const reportEl = document.getElementById('reportSection');
+          // use html2canvas to render
+          const canvas = await html2canvas(reportEl, { scale: 2, useCORS: true });
+          canvas.toBlob(function(blob) {
+            if (!blob) return;
+            const filename = `${empcode}_${empname || 'report'}_${new Date().toISOString().slice(0,10)}.jpg`;
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            // For mobile browsers, a user gesture is better; we try auto-click.
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(()=> {
+              URL.revokeObjectURL(link.href);
+              link.remove();
+            }, 1500);
+          }, 'image/jpeg', 0.9);
+        } catch (e) {
+          console.warn('Failed to auto-generate JPG:', e);
+          // fallback: do nothing (user can manually screenshot)
+        }
+      }, 800);
     }
 
     function calculateOT(inTime, outTime) {
@@ -703,8 +856,10 @@
       const [inHour, inMin] = inTime.split(':').map(Number);
       const [outHour, outMin] = outTime.split(':').map(Number);
 
-      let inMinutes = inHour * 60 + inMin;
-      let outMinutes = outHour * 60 + outMin;
+      if (isNaN(inHour) || isNaN(outHour)) return 0;
+
+      let inMinutes = inHour * 60 + (inMin || 0);
+      let outMinutes = outHour * 60 + (outMin || 0);
 
       // Handle next day checkout
       if (outMinutes < inMinutes) {
@@ -720,6 +875,7 @@
       return otHours;
     }
 
+    // Back buttons
     document.getElementById('backBtn').addEventListener('click', () => {
       document.getElementById('reportSection').style.display = 'none';
       document.getElementById('searchSection').style.display = 'block';
@@ -735,6 +891,7 @@
       document.getElementById('searchSection').style.display = 'block';
     });
 
+    // Grievance form submit -> will try to post to connected web app if present, otherwise use dataSdk.create
     document.getElementById('grievanceForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -752,22 +909,83 @@
         submitted_at: new Date().toISOString()
       };
 
-      const result = await window.dataSdk.create(grievance);
-
-      btn.disabled = false;
-      btn.textContent = originalText;
-
-      if (result.isOk) {
-        showMessage('success', 'Grievance submitted successfully! Your request will be reviewed.', 'grievanceMessage');
-        document.getElementById('grievanceForm').reset();
-        
+      try {
+        if (connectedWebAppUrl) {
+          // Use JSONP-safe GET to submit grievance (Google Apps Script endpoint supports this example)
+          const params = new URLSearchParams();
+          params.set('action', 'submit_grievance');
+          params.set('empcode', grievance.empcode);
+          params.set('empname', grievance.empname);
+          params.set('date', grievance.date);
+          params.set('issue_type', grievance.issue_type);
+          params.set('details', grievance.details);
+          // try fetch first
+          const resp = await fetch(`${connectedWebAppUrl}?${params.toString()}`);
+          if (resp.ok) {
+            const payload = await resp.json();
+            if (payload && payload.isOk) {
+              showMessage('success', 'Grievance submitted successfully!', 'grievanceMessage');
+              document.getElementById('grievanceForm').reset();
+            } else {
+              showMessage('error', 'Failed to submit grievance via web app. Try again.', 'grievanceMessage');
+            }
+          } else {
+            // JSONP fallback
+            await new Promise((resolve, reject) => {
+              const callbackName = 'handleGrievance_' + Date.now();
+              window[callbackName] = function(response) {
+                try {
+                  if (response && response.isOk) {
+                    showMessage('success', 'Grievance submitted successfully!', 'grievanceMessage');
+                    document.getElementById('grievanceForm').reset();
+                    resolve();
+                  } else {
+                    showMessage('error', 'Failed to submit grievance via web app.', 'grievanceMessage');
+                    reject(new Error('submit failed'));
+                  }
+                } catch (e) {
+                  reject(e);
+                } finally {
+                  delete window[callbackName];
+                  const scriptEl = document.getElementById(callbackName + '_script');
+                  if (scriptEl) scriptEl.remove();
+                }
+              };
+              const script = document.createElement('script');
+              script.id = callbackName + '_script';
+              script.src = `${connectedWebAppUrl}?action=submit_grievance&empcode=${encodeURIComponent(grievance.empcode)}&empname=${encodeURIComponent(grievance.empname)}&date=${encodeURIComponent(grievance.date)}&issue_type=${encodeURIComponent(grievance.issue_type)}&details=${encodeURIComponent(grievance.details)}&callback=${callbackName}`;
+              script.onerror = function() {
+                delete window[callbackName];
+                script.remove();
+                showMessage('error', 'Failed to submit grievance via web app (JSONP failed).', 'grievanceMessage');
+                reject(new Error('JSONP failed'));
+              };
+              document.head.appendChild(script);
+            });
+          }
+        } else if (window.dataSdk && window.dataSdk.create) {
+          // fallback to Canva Sheet via dataSdk
+          const result = await window.dataSdk.create(grievance);
+          if (result && result.isOk) {
+            showMessage('success', 'Grievance submitted successfully! Your request will be reviewed.', 'grievanceMessage');
+            document.getElementById('grievanceForm').reset();
+          } else {
+            showMessage('error', 'Failed to submit grievance. Please try again.', 'grievanceMessage');
+          }
+        } else {
+          showMessage('error', 'No backend configured to submit grievance. Please paste web app URL or enable data SDK.', 'grievanceMessage');
+        }
+      } catch (err) {
+        showMessage('error', 'Failed to submit grievance: ' + err.message, 'grievanceMessage');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        // auto-return to search after short delay on success
         setTimeout(() => {
+          hideMessage('grievanceMessage');
           document.getElementById('grievanceSection').style.display = 'none';
           document.getElementById('searchSection').style.display = 'block';
-          hideMessage('grievanceMessage');
         }, 2000);
-      } else {
-        showMessage('error', 'Failed to submit grievance. Please try again.', 'grievanceMessage');
       }
     });
 
@@ -777,7 +995,7 @@
         messageEl.className = `message ${type}`;
         messageEl.textContent = text;
         messageEl.style.display = 'block';
-        
+
         setTimeout(() => {
           hideMessage(elementId);
         }, 5000);
@@ -785,15 +1003,15 @@
         // Create inline message for search section
         const existingMsg = document.querySelector('.search-section .message');
         if (existingMsg) existingMsg.remove();
-        
+
         const msg = document.createElement('div');
         msg.className = `message ${type}`;
         msg.textContent = text;
         msg.style.display = 'block';
-        
+
         const searchSection = document.getElementById('searchSection');
         searchSection.insertBefore(msg, searchSection.querySelector('.search-group'));
-        
+
         setTimeout(() => {
           msg.remove();
         }, 5000);
@@ -807,7 +1025,10 @@
       }
     }
 
+    // initialize on load
     initializeApp();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a5912a3d5657e8a',t:'MTc2NDMyNDU5OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a5912a3d5657e8a',t:'MTc2NDMyNDU5OC4wMD[...]";b.body.appendChild(d)}}}try{var a=document.getElementById('__cf_chl_iframe');if(a){a.addEventListener? a.addEventListener('load',c):a.onload=c;}}catch(e){}})();</script>
+</body>
 </html>
