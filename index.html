@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Attendance Lookup</title>
+  <style>
+    body{margin:0;font-family:Arial;background:#f4f4f4;padding:15px}
+    .box{background:#fff;padding:15px;border-radius:10px;box-shadow:0 0 10px #ddd;margin-bottom:15px}
+    input,select,textarea,button{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc;font-size:16px}
+    button{background:#005eff;color:#fff;border:none;margin-top:12px}
+    .link{background:none;color:#005eff;text-decoration:underline;margin-top:10px;border:none}
+    .row{display:flex;gap:10px}
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>Attendance Lookup</h2>
+  <label>EMPCODE</label>
+  <input id="empcode" placeholder="Enter EMPCODE">
+
+  <label>Month (optional)</label>
+  <select id="month">
+    <option value="">All</option>
+    <option value="1">Jan</option>
+    <option value="2">Feb</option>
+    <option value="3">Mar</option>
+    <option value="4">Apr</option>
+    <option value="5">May</option>
+    <option value="6">Jun</option>
+    <option value="7">Jul</option>
+    <option value="8">Aug</option>
+    <option value="9">Sep</option>
+    <option value="10">Oct</option>
+    <option value="11">Nov</option>
+    <option value="12">Dec</option>
+  </select>
+
+  <button id="searchBtn">Search & Download JPG</button>
+  <button id="grievBtn" class="link">Submit Grievance</button>
+
+  <p id="status" style="color:#444;font-size:14px;margin-top:10px;"></p>
+</div>
+
+<div id="grievBox" class="box" style="display:none">
+  <h3>Grievance</h3>
+  <label>EMPCODE</label>
+  <input id="gEmp" readonly>
+
+  <label>Description</label>
+  <textarea id="gMsg" rows="3"></textarea>
+
+  <button id="submitGriev">Submit</button>
+  <button id="closeGriev" class="link">Close</button>
+
+  <p id="gStatus" style="color:#444;font-size:14px;margin-top:10px;"></p>
+</div>
+
+<div id="reportBox" class="box" style="display:none">
+  <div id="report"></div>
+</div>
+
+<script>
+// === CONFIG — REPLACE THESE TWO URLs ===
+const SHEET_JSON_URL = "15JNjzdzZLwQS3angCz5sgMCfQctQ3LmsDRYX_fGwecA";
+const GRIEVANCE_POST_URL = "https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec";
+
+// Load html2canvas
+function loadHtml2Canvas(){
+  return new Promise((res)=>{
+    if(window.html2canvas){res();return;}
+    let s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+    s.onload=res;
+    document.head.appendChild(s);
+  });
+}
+
+function rowsToObjects(rows){
+  const header = rows[0];
+  const data=[];
+  for(let i=1;i<rows.length;i++){
+    let obj={};
+    header.forEach((h,j)=>obj[h]=rows[i][j]);
+    data.push(obj);
+  }
+  return data;
+}
+
+async function fetchSheet(){
+  const r = await fetch(SHEET_JSON_URL);
+  const j = await r.json();
+  return j.data;
+}
+
+function filterRows(rows, emp, month){
+  const objs = rowsToObjects(rows);
+  let f = objs.filter(r => (""+r.EMPCODE).toLowerCase() === emp.toLowerCase());
+  if(month) f = f.filter(r => Number(r.SHMONTH) === Number(month));
+  return f;
+}
+
+function computeTotals(rows){
+  const parse = (t)=>{
+    let m=t.match(/(\\d{1,2}):(\\d{2})/);
+    return m? Number(m[1])*60+Number(m[2]) : null;
+  };
+
+  let total=0, days=0, arr=[];
+  rows.forEach(r=>{
+    let i=parse(r.IN), o=parse(r.OUT);
+    if(i!=null && o!=null){
+      days++;
+      let diff=o-i;
+      if(diff<=0) diff+=1440;
+      total+=diff;
+      arr.push({...r, worked:diff});
+    }
+  });
+
+  let ot = Math.max(0, total - days*720);
+  return {rows:arr, days, ot};
+}
+
+function renderReport(emp, empname, t){
+  let html = `<div style='padding:20px;font-family:Arial;background:#fff;width:100%;max-width:700px'>
+    <h2>${empname}</h2>
+    <p>EMPCODE: ${emp}</p>
+    <p>Present: ${t.days} | OT Hours: ${(t.ot/60).toFixed(2)}</p>
+    <hr>`;
+  t.rows.forEach(r=>{
+    html+=`<p>${r.SHDATE}-${r.SHMONTH}-${r.SHYEAR} | ${r.IN} → ${r.OUT} | ${(r.worked/60).toFixed(2)}h</p>`;
+  });
+  html+=`</div>`;
+  return html;
+}
+
+async function downloadJPG(html, emp){
+  await loadHtml2Canvas();
+  let div=document.createElement("div");
+  div.innerHTML=html;
+  document.getElementById("report").innerHTML="";
+  document.getElementById("report").appendChild(div);
+
+  let canvas = await html2canvas(div,{scale:2});
+  let url = canvas.toDataURL("image/jpeg",0.95);
+  let a=document.createElement("a");
+  a.href=url; a.download=`${emp}_attendance.jpg`;
+  a.click();
+  document.getElementById("reportBox").style.display="block";
+}
+
+document.getElementById("searchBtn").onclick = async ()=>{
+  let emp=document.getElementById("empcode").value.trim();
+  let month=document.getElementById("month").value;
+  if(!emp){document.getElementById("status").textContent="Enter EMPCODE";return;}
+
+  let rows=await fetchSheet();
+  let f=filterRows(rows, emp, month);
+  if(f.length===0){document.getElementById("status").textContent="No records found";return;}
+
+  let empname=f[0].EMPNAME;
+  let t=computeTotals(f);
+  let html=renderReport(emp, empname, t);
+  downloadJPG(html, emp);
+};
+
+// grievance
+document.getElementById("grievBtn").onclick=()=>{
+  document.getElementById("gEmp").value=document.getElementById("empcode").value;
+  document.getElementById("grievBox").style.display="block";
+};
+
+document.getElementById("closeGriev").onclick=()=>{
+  document.getElementById("grievBox").style.display="none";
+};
+
+document.getElementById("submitGriev").onclick=async()=>{
+  let emp=document.getElementById("gEmp").value.trim();
+  let msg=document.getElementById("gMsg").value.trim();
+  if(!msg){document.getElementById("gStatus").textContent="Enter message";return;}
+
+  let res = await fetch(GRIEVANCE_POST_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({empcode:emp,message:msg,timestamp:new Date().toISOString()})
+  });
+
+  document.getElementById("gStatus").textContent = res.ok?"Submitted":"Error";
+};
+</script>
+
+</body>
+</html>
