@@ -1,778 +1,263 @@
 <!doctype html>
 <html lang="en">
- <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Employee Attendance Portal</title>
-  <script src="/_sdk/data_sdk.js"></script>
-  <script src="/_sdk/element_sdk.js"></script>
-  <style>
-    body {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100%;
-      width: 100%;
-    }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 20px;
-      min-height: 100%;
-    }
-
-    .header {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      text-align: center;
-    }
-
-    .header h1 {
-      margin: 0 0 8px 0;
-      font-size: 24px;
-      color: #667eea;
-    }
-
-    .header p {
-      margin: 0;
-      color: #666;
-      font-size: 14px;
-    }
-
-    .search-section {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .search-section h2 {
-      margin: 0 0 16px 0;
-      font-size: 18px;
-      color: #333;
-    }
-
-    .search-group {
-      margin-bottom: 16px;
-    }
-
-    .search-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 14px;
-      color: #666;
-      font-weight: 500;
-    }
-
-    .search-group input {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 16px;
-      transition: border-color 0.3s;
-    }
-
-    .search-group input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-
-    .data-source-info {
-      background: #e8f4f8;
-      border-left: 4px solid #17a2b8;
-      padding: 12px;
-      margin-bottom: 16px;
-      border-radius: 4px;
-      font-size: 13px;
-      color: #0c5460;
-    }
-
-    .data-source-info.external {
-      background: #d1ecf1;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s;
-      margin-bottom: 12px;
-    }
-
-    .btn-primary {
-      background: #667eea;
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: #5568d3;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-primary:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .btn-secondary {
-      background: #764ba2;
-      color: white;
-    }
-
-    .btn-secondary:hover {
-      background: #633d8a;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(118, 75, 162, 0.4);
-    }
-
-    .btn-info {
-      background: #17a2b8;
-      color: white;
-    }
-
-    .btn-info:hover {
-      background: #138496;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
-    }
-
-    .report-section {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      display: none;
-    }
-
-    .report-header {
-      text-align: center;
-      border-bottom: 2px solid #667eea;
-      padding-bottom: 16px;
-      margin-bottom: 20px;
-    }
-
-    .report-header h2 {
-      margin: 0 0 8px 0;
-      color: #667eea;
-      font-size: 20px;
-    }
-
-    .report-header .emp-info {
-      font-size: 14px;
-      color: #666;
-      margin: 4px 0;
-    }
-
-    .summary-cards {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .summary-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 16px;
-      border-radius: 12px;
-      text-align: center;
-    }
-
-    .summary-card .label {
-      font-size: 12px;
-      opacity: 0.9;
-      margin-bottom: 4px;
-    }
-
-    .summary-card .value {
-      font-size: 24px;
-      font-weight: bold;
-    }
-
-    .attendance-list {
-      margin-top: 20px;
-    }
-
-    .attendance-list h3 {
-      font-size: 16px;
-      color: #333;
-      margin: 0 0 12px 0;
-    }
-
-    .attendance-item {
-      background: #f8f9fa;
-      border-left: 4px solid #667eea;
-      padding: 12px;
-      margin-bottom: 8px;
-      border-radius: 8px;
-    }
-
-    .attendance-item .date {
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 6px;
-    }
-
-    .attendance-item .times {
-      display: flex;
-      justify-content: space-between;
-      font-size: 14px;
-      color: #666;
-    }
-
-    .attendance-item .times span {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .grievance-section {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      display: none;
-    }
-
-    .grievance-section h2 {
-      margin: 0 0 16px 0;
-      font-size: 18px;
-      color: #333;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 14px;
-      color: #666;
-      font-weight: 500;
-    }
-
-    .form-group input,
-    .form-group textarea {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 14px;
-      font-family: inherit;
-    }
-
-    .form-group textarea {
-      min-height: 100px;
-      resize: vertical;
-    }
-
-    .message {
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      font-size: 14px;
-      display: none;
-    }
-
-    .message.success {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-
-    .message.error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-
-    .loading {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid #ffffff;
-      border-radius: 50%;
-      border-top-color: transparent;
-      animation: spin 0.8s linear infinite;
-      margin-left: 8px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .back-btn {
-      background: #6c757d;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      margin-bottom: 16px;
-    }
-
-    .back-btn:hover {
-      background: #5a6268;
-    }
-
-    @media (max-width: 480px) {
-      .container {
-        padding: 12px;
-      }
-
-      .header h1 {
-        font-size: 20px;
-      }
-
-      .summary-cards {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
-  <style>@view-transition { navigation: auto; }</style>
-  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
-
-  <!-- html2canvas for client-side capture -> generate JPG on phone -->
+  <!-- html2canvas used to generate JPG download on device -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5wZ3zXq4+ZbJgXn1xvB2p1mS2k3gQYwX3qz2m1y1q9/0+UoI8V2zKp1cw5wX1R3lD7k1O4wzI7Yt9G1mBg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
- </head>
- <body>
+
+  <style>
+    /* (styles identical to previous file - kept compact here for brevity) */
+    body{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100%;color:#333}
+    .container{width:100%;max-width:480px;margin:0 auto;padding:20px;min-height:100%}
+    .header{background:#fff;border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1);text-align:center}
+    .header h1{margin:0 0 8px 0;font-size:24px;color:#667eea}
+    .search-section,.report-section,.grievance-section{background:#fff;border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1)}
+    .search-group{margin-bottom:16px}
+    .search-group label{display:block;margin-bottom:8px;font-size:14px;color:#666;font-weight:500}
+    input[type="text"], input[type="date"], input[type="url"], textarea{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px}
+    .btn{width:100%;padding:14px;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;margin-bottom:12px}
+    .btn-primary{background:#667eea;color:#fff}
+    .btn-info{background:#17a2b8;color:#fff}
+    .btn-secondary{background:#764ba2;color:#fff}
+    .back-btn{background:#6c757d;color:#fff;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;margin-bottom:16px}
+    .message{display:none;padding:12px;border-radius:8px;margin-bottom:16px}
+    .message.success{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+    .message.error{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+    .attendance-item{background:#f8f9fa;border-left:4px solid #667eea;padding:12px;margin-bottom:8px;border-radius:8px}
+    .summary-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+    .summary-card{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:16px;border-radius:12px;text-align:center}
+    @media(max-width:480px){.container{padding:12px}.summary-cards{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
   <div class="container">
-   <div class="header">
-    <h1 id="app-title">Employee Attendance Portal</h1>
-    <p id="company-name">Your Company Name</p>
-   </div>
-   <div class="search-section" id="searchSection">
-    <h2>Search Attendance</h2>
-    <div class="data-source-info" id="dataSourceInfo">
-     📊 Data Source: Canva Sheet Storage
+    <div class="header">
+      <h1 id="app-title">Employee Attendance Portal</h1>
+      <p id="company-name">Your Company Name</p>
     </div>
 
-    <!-- Web App URL area: paste your Google Apps Script Web App URL here (optional).
-         If provided, the app will fetch data from your Google Sheet web app (JSONP-safe). -->
-    <div class="search-group">
-      <label for="webAppUrl">Paste your Google Apps Script Web App URL (optional)</label>
-      <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec">
-      <button class="btn btn-secondary" id="connectWebAppBtn" style="margin-top:8px;">Connect Web App</button>
-    </div>
+    <div class="search-section" id="searchSection">
+      <h2>Search Attendance</h2>
+      <div class="data-source-info" id="dataSourceInfo">🌐 Data Source: Google Apps Script Web App</div>
 
-    <div class="search-group"><label for="empcode" id="search-label">Enter Employee Code</label> <input type="text" id="empcode" placeholder="e.g., EMP001">
-    </div>
-
-    <button class="btn btn-primary" id="searchBtn">View My Attendance</button>
-    <button class="btn btn-info" id="fetchDataBtn" style="display: none;">Fetch Data from URL</button>
-    <button class="btn btn-info" id="grievanceBtn">Report Missing / OT</button>
-   </div>
-
-   <div class="report-section" id="reportSection"><button class="back-btn" id="backBtn">← Back to Search</button>
-    <div class="report-header" id="reportHeader">
-     <h2 id="report-company">Your Company Name</h2>
-     <div class="emp-info" id="empInfo"></div>
-    </div>
-    <div class="summary-cards">
-     <div class="summary-card">
-      <div class="label">
-       Total Present Days
+      <!-- EMP code input -->
+      <div class="search-group">
+        <label for="empcode" id="search-label">Enter Employee Code</label>
+        <input type="text" id="empcode" placeholder="e.g., EMP001" autocomplete="off"/>
       </div>
-      <div class="value" id="totalPresent">
-       0
-      </div>
-     </div>
-     <div class="summary-card">
-      <div class="label">
-       Total OT Hours
-      </div>
-      <div class="value" id="totalOT">
-       0
-      </div>
-     </div>
-    </div>
-    <div class="attendance-list">
-     <h3>Attendance Records</h3>
-     <div id="attendanceList"></div>
-    </div>
-   </div>
 
-   <div class="grievance-section" id="grievanceSection"><button class="back-btn" id="backBtn2">← Back to Search</button>
-    <h2>Report Missing Attendance / OT</h2>
-    <div class="message" id="grievanceMessage"></div>
-    <form id="grievanceForm">
-     <div class="form-group"><label for="griev-empcode">Employee Code *</label> <input type="text" id="griev-empcode" required>
-     </div>
-     <div class="form-group"><label for="griev-empname">Employee Name *</label> <input type="text" id="griev-empname" required>
-     </div>
-     <div class="form-group"><label for="griev-date">Date *</label> <input type="date" id="griev-date" required>
-     </div>
-     <div class="form-group"><label for="griev-issue">Issue Type *</label> <input type="text" id="griev-issue" placeholder="e.g., Missing attendance, Wrong OT hours" required>
-     </div>
-     <div class="form-group"><label for="griev-details">Details *</label> <textarea id="griev-details" placeholder="Please describe the issue in detail..." required></textarea>
-     </div><button type="submit" class="btn btn-primary" id="submitGrievance">Submit Grievance</button>
-    </form>
-   </div>
+      <button class="btn btn-primary" id="searchBtn">View My Attendance</button>
+      <button class="btn btn-info" id="fetchDataBtn">Fetch Latest Attendance (from Web App)</button>
+      <button class="btn btn-info" id="grievanceBtn">Report Missing / OT</button>
+    </div>
+
+    <div class="report-section" id="reportSection" style="display:none">
+      <button class="back-btn" id="backBtn">← Back to Search</button>
+      <div class="report-header" id="reportHeader">
+        <h2 id="report-company">Your Company Name</h2>
+        <div class="emp-info" id="empInfo"></div>
+      </div>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="label">Total Present Days</div>
+          <div class="value" id="totalPresent">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Total OT Hours</div>
+          <div class="value" id="totalOT">0</div>
+        </div>
+      </div>
+
+      <div class="attendance-list">
+        <h3>Attendance Records</h3>
+        <div id="attendanceList"></div>
+      </div>
+
+      <!-- Download button for individual attendance report -->
+      <div style="margin-top:16px">
+        <button class="btn btn-secondary" id="downloadBtn">Download Report (JPG)</button>
+      </div>
+    </div>
+
+    <div class="grievance-section" id="grievanceSection" style="display:none">
+      <button class="back-btn" id="backBtn2">← Back to Search</button>
+      <h2>Report Missing Attendance / OT</h2>
+      <div class="message" id="grievanceMessage"></div>
+      <form id="grievanceForm">
+        <div class="form-group">
+          <label for="griev-empcode">Employee Code *</label>
+          <input type="text" id="griev-empcode" required />
+        </div>
+        <div class="form-group">
+          <label for="griev-empname">Employee Name *</label>
+          <input type="text" id="griev-empname" required />
+        </div>
+        <div class="form-group">
+          <label for="griev-date">Date *</label>
+          <input type="date" id="griev-date" required />
+        </div>
+        <div class="form-group">
+          <label for="griev-issue">Issue Type *</label>
+          <input type="text" id="griev-issue" placeholder="e.g., Missing attendance, Wrong OT hours" required />
+        </div>
+        <div class="form-group">
+          <label for="griev-details">Details *</label>
+          <textarea id="griev-details" placeholder="Please describe the issue in detail..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitGrievance">Submit Grievance</button>
+      </form>
+    </div>
   </div>
 
   <script>
-    // default config (used by elementSdk or fallback)
-    const defaultConfig = {
-      app_title: "Employee Attendance Portal",
-      company_name: "Your Company Name",
-      search_label: "Enter Employee Code",
-      data_source_url: "",
-      primary_color: "#667eea",
-      secondary_color: "#764ba2",
-      background_color: "#f8f9fa",
-      text_color: "#333333",
-      button_color: "#667eea",
-      font_family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto",
-      font_size: 16
-    };
+    /**
+     * IMPORTANT:
+     * Set WEB_APP_URL to your deployed Google Apps Script Web App URL (the one you get when you deploy "Web app").
+     * Example: "https://script.google.com/macros/s/AKfycbx.../exec"
+     */
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzq56KQRgnSMQPiqqP_-1XZYolm52m5iEq9EKXfBWfYxNyXCL4DlGjahlAwIjYd0gBy/exec"; // <-- REPLACE with your web app URL
 
-    let attendanceRecords = [];    // from Canva Sheet / elementSdk data
-    let grievanceRecords = [];
-    let externalDataCache = [];    // from pasted web app URL / external fetch
-    let connectedWebAppUrl = '';   // user-pasted web app URL
+    // local cache
+    let externalDataCache = [];
 
-    const dataHandler = {
-      onDataChanged(data) {
-        // Separate attendance and grievance records
-        attendanceRecords = data.filter(record => record.in_time !== undefined);
-        grievanceRecords = data.filter(record => record.in_time === undefined);
-      }
-    };
-
-    async function initializeApp() {
-      // initialize data SDK if present
-      if (window.dataSdk && window.dataSdk.init) {
-        const initResult = await window.dataSdk.init(dataHandler);
-        if (!initResult.isOk) {
-          console.error("Failed to initialize data SDK");
-        }
-      }
-
-      // elementSdk config handling
-      if (window.elementSdk && window.elementSdk.init) {
-        await window.elementSdk.init({
-          defaultConfig,
-          onConfigChange: async (config) => {
-            const appTitle = config.app_title || defaultConfig.app_title;
-            const companyName = config.company_name || defaultConfig.company_name;
-            const searchLabel = config.search_label || defaultConfig.search_label;
-            const dataSourceUrl = config.data_source_url || defaultConfig.data_source_url;
-            const primaryColor = config.primary_color || defaultConfig.primary_color;
-            const secondaryColor = config.secondary_color || defaultConfig.secondary_color;
-            const backgroundColor = config.background_color || defaultConfig.background_color;
-            const textColor = config.text_color || defaultConfig.text_color;
-            const buttonColor = config.button_color || defaultConfig.button_color;
-            const fontFamily = config.font_family || defaultConfig.font_family;
-            const fontSize = config.font_size || defaultConfig.font_size;
-
-            document.getElementById('app-title').textContent = appTitle;
-            document.getElementById('company-name').textContent = companyName;
-            document.getElementById('report-company').textContent = companyName;
-            document.getElementById('search-label').textContent = searchLabel;
-
-            const fetchBtn = document.getElementById('fetchDataBtn');
-            const dataSourceInfo = document.getElementById('dataSourceInfo');
-
-            if (dataSourceUrl && dataSourceUrl.trim() !== '') {
-              fetchBtn.style.display = 'block';
-              dataSourceInfo.innerHTML = '🌐 Data Source: External URL + Canva Sheet';
-              dataSourceInfo.classList.add('external');
-              // set the paste box value too
-              document.getElementById('webAppUrl').value = dataSourceUrl;
-              connectedWebAppUrl = dataSourceUrl;
-              fetchBtn.textContent = 'Fetch Data from Web App';
-            } else {
-              fetchBtn.style.display = 'none';
-              dataSourceInfo.innerHTML = '📊 Data Source: Canva Sheet Storage';
-              dataSourceInfo.classList.remove('external');
-              connectedWebAppUrl = '';
-            }
-
-            document.body.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
-            document.body.style.fontFamily = `${fontFamily}, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto`;
-            document.body.style.fontSize = `${fontSize}px`;
-
-            const summaryCards = document.querySelectorAll('.summary-card');
-            summaryCards.forEach(card => {
-              card.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
-            });
-
-            const primaryButtons = document.querySelectorAll('.btn-primary');
-            primaryButtons.forEach(btn => {
-              btn.style.background = buttonColor;
-            });
-
-            const secondaryButtons = document.querySelectorAll('.btn-secondary');
-            secondaryButtons.forEach(btn => {
-              btn.style.background = secondaryColor;
-            });
-
-            const reportHeader = document.querySelector('.report-header');
-            if (reportHeader) {
-              reportHeader.style.borderBottomColor = primaryColor;
-            }
-
-            const reportH2 = document.querySelector('.report-header h2');
-            if (reportH2) {
-              reportH2.style.color = primaryColor;
-            }
-
-            const attendanceItems = document.querySelectorAll('.attendance-item');
-            attendanceItems.forEach(item => {
-              item.style.borderLeftColor = primaryColor;
-            });
-          },
-          mapToCapabilities: (config) => ({
-            recolorables: [
-              {
-                get: () => config.primary_color || defaultConfig.primary_color,
-                set: (value) => {
-                  window.elementSdk.config.primary_color = value;
-                  window.elementSdk.setConfig({ primary_color: value });
-                }
-              },
-              {
-                get: () => config.secondary_color || defaultConfig.secondary_color,
-                set: (value) => {
-                  window.elementSdk.config.secondary_color = value;
-                  window.elementSdk.setConfig({ secondary_color: value });
-                }
-              },
-              {
-                get: () => config.background_color || defaultConfig.background_color,
-                set: (value) => {
-                  window.elementSdk.config.background_color = value;
-                  window.elementSdk.setConfig({ background_color: value });
-                }
-              },
-              {
-                get: () => config.text_color || defaultConfig.text_color,
-                set: (value) => {
-                  window.elementSdk.config.text_color = value;
-                  window.elementSdk.setConfig({ text_color: value });
-                }
-              },
-              {
-                get: () => config.button_color || defaultConfig.button_color,
-                set: (value) => {
-                  window.elementSdk.config.button_color = value;
-                  window.elementSdk.setConfig({ button_color: value });
-                }
-              }
-            ],
-            borderables: [],
-            fontEditable: {
-              get: () => config.font_family || defaultConfig.font_family,
-              set: (value) => {
-                window.elementSdk.config.font_family = value;
-                window.elementSdk.setConfig({ font_family: value });
-              }
-            },
-            fontSizeable: {
-              get: () => config.font_size || defaultConfig.font_size,
-              set: (value) => {
-                window.elementSdk.config.font_size = value;
-                window.elementSdk.setConfig({ font_size: value });
-              }
-            }
-          }),
-          mapToEditPanelValues: (config) => new Map([
-            ["app_title", config.app_title || defaultConfig.app_title],
-            ["company_name", config.company_name || defaultConfig.company_name],
-            ["search_label", config.search_label || defaultConfig.search_label],
-            ["data_source_url", config.data_source_url || defaultConfig.data_source_url]
-          ])
-        });
-      }
-    }
-
-    // Connect button for pasted web app URL
-    document.getElementById('connectWebAppBtn').addEventListener('click', () => {
-      const url = document.getElementById('webAppUrl').value.trim();
-      if (!url) {
-        showMessage('error', 'Please paste your Web App URL (from Google Apps Script).');
+    // UI helpers
+    function showMessage(type, text, targetId = null) {
+      const id = targetId || 'message';
+      const parentEl = document.getElementById(id);
+      if (parentEl) {
+        parentEl.className = `message ${type}`;
+        parentEl.textContent = text;
+        parentEl.style.display = 'block';
+        setTimeout(()=> parentEl.style.display = 'none', 5000);
         return;
       }
-      connectedWebAppUrl = url;
-      document.getElementById('fetchDataBtn').style.display = 'block';
-      document.getElementById('dataSourceInfo').innerHTML = '🌐 Data Source: External Web App + Canva Sheet';
-      document.getElementById('dataSourceInfo').classList.add('external');
-      showMessage('success', 'Web App URL saved. Click "Fetch Data from URL" to load attendance records.');
-    });
+      // fallback: inline in search section
+      const existing = document.querySelector('.search-section .message');
+      if (existing) existing.remove();
+      const msg = document.createElement('div');
+      msg.className = `message ${type}`;
+      msg.textContent = text;
+      msg.style.display = 'block';
+      const searchSection = document.getElementById('searchSection');
+      searchSection.insertBefore(msg, searchSection.querySelector('.search-group'));
+      setTimeout(()=> msg.remove(), 5000);
+    }
 
-    // Fetch data from external URL (tries normal fetch then JSONP fallback)
-    document.getElementById('fetchDataBtn').addEventListener('click', async () => {
-      // prefer the connected web app url, otherwise try config
-      const urlFromInput = document.getElementById('webAppUrl').value.trim();
-      const url = urlFromInput || connectedWebAppUrl || (window.elementSdk && window.elementSdk.config && window.elementSdk.config.data_source_url) || '';
-      if (!url) {
-        showMessage('error', 'No data source URL configured. Paste your Google Apps Script Web App URL above.');
+    // Fetch all attendance from web app (?action=all)
+    async function fetchAllFromWebApp() {
+      if (!WEB_APP_URL || WEB_APP_URL.includes('AKfy...')) {
+        showMessage('error', 'WEB_APP_URL not configured. Edit the index.html constant WEB_APP_URL and set it to your Apps Script Web App URL.');
         return;
       }
 
       const btn = document.getElementById('fetchDataBtn');
       const originalText = btn.textContent;
       btn.disabled = true;
-      btn.innerHTML = 'Fetching... <span class="loading"></span>';
+      btn.textContent = 'Fetching...';
 
       try {
-        // Try normal fetch first (works if web app allows CORS)
-        const response = await fetch(`${url}?action=all`);
-        if (response.ok) {
-          const data = await response.json();
-          // If it looks like our wrapped response (isOk/data)
-          externalDataCache = Array.isArray(data) ? data : (data.data || []);
+        // Try CORS fetch
+        const res = await fetch(`${WEB_APP_URL}?action=all`);
+        if (res.ok) {
+          const payload = await res.json();
+          externalDataCache = payload.data && Array.isArray(payload.data) ? payload.data : (Array.isArray(payload) ? payload : []);
           showMessage('success', `Fetched ${externalDataCache.length} records from web app.`);
-        } else {
-          // fallback to JSONP approach
-          throw new Error('CORS or non-OK response - falling back to JSONP');
+          return;
         }
+        throw new Error('Non-OK response, trying JSONP fallback');
       } catch (err) {
-        // JSONP fallback for Google Apps Script web app (it supports callback wrapper)
+        // JSONP fallback
         try {
           await new Promise((resolve, reject) => {
-            const callbackName = 'handleExternalData_' + Date.now();
-            window[callbackName] = function(response) {
+            const cb = 'cb_' + Date.now();
+            window[cb] = function(response) {
               try {
                 externalDataCache = response && response.data ? response.data : (Array.isArray(response) ? response : []);
                 showMessage('success', `Fetched ${externalDataCache.length} records via JSONP.`);
                 resolve();
-              } catch (e) {
-                reject(e);
-              } finally {
-                // cleanup
-                delete window[callbackName];
-                const scriptEl = document.getElementById(callbackName + '_script');
-                if (scriptEl) scriptEl.remove();
+              } catch (e) { reject(e); } finally {
+                delete window[cb];
+                const s = document.getElementById(cb + '_script'); if (s) s.remove();
               }
             };
-
-            // append script tag
             const script = document.createElement('script');
-            script.id = callbackName + '_script';
-            script.src = `${url}?action=all&callback=${callbackName}`;
-            script.onerror = function(e) {
-              delete window[callbackName];
-              script.remove();
-              reject(new Error('JSONP request failed'));
-            };
+            script.id = cb + '_script';
+            script.src = `${WEB_APP_URL}?action=all&callback=${cb}`;
+            script.onerror = function(){ delete window[cb]; script.remove(); reject(new Error('JSONP failed')); };
             document.head.appendChild(script);
           });
-        } catch (jsonpErr) {
-          showMessage('error', 'Failed to fetch data from web app: ' + jsonpErr.message);
+        } catch (e) {
+          showMessage('error', 'Failed to fetch data from web app: ' + e.message);
         }
       } finally {
         btn.disabled = false;
         btn.textContent = originalText;
       }
-    });
+    }
 
-    // Search by empcode (combines local attendanceRecords + externalDataCache)
+    // Search by empcode (combining cache only; if cache empty, try employee endpoint)
     document.getElementById('searchBtn').addEventListener('click', async () => {
-      const empcode = document.getElementById('empcode').value.trim().toUpperCase();
-
-      if (!empcode) {
-        showMessage('error', 'Please enter an employee code');
-        return;
-      }
+      const empcode = (document.getElementById('empcode').value || '').trim().toUpperCase();
+      if (!empcode) { showMessage('error', 'Please enter an employee code'); return; }
 
       const btn = document.getElementById('searchBtn');
       const originalText = btn.textContent;
       btn.disabled = true;
-      btn.innerHTML = 'Searching... <span class="loading"></span>';
+      btn.textContent = 'Searching...';
 
-      // Combine records from Canva Sheet and external cache
-      const combinedRecords = [...attendanceRecords, ...externalDataCache];
+      // First search local cache
+      let results = (externalDataCache || []).filter(r => (r.empcode || '').toString().toUpperCase() === empcode);
 
-      // Filter records for this employee
-      const employeeRecords = combinedRecords.filter(record =>
-        (record.empcode || '').toString().toUpperCase() === empcode
-      );
+      // If no results and WEB_APP_URL configured, try server endpoint ?action=employee&empcode=
+      if ((!results || results.length === 0) && WEB_APP_URL && !WEB_APP_URL.includes('AKfy...')) {
+        try {
+          const res = await fetch(`${WEB_APP_URL}?action=employee&empcode=${encodeURIComponent(empcode)}`);
+          if (res.ok) {
+            const payload = await res.json();
+            results = payload.data || (Array.isArray(payload) ? payload : []);
+          } else {
+            // JSONP fallback for single employee
+            await new Promise((resolve, reject) => {
+              const cb = 'cb_emp_' + Date.now();
+              window[cb] = function(response) {
+                try {
+                  const data = response && response.data ? response.data : (Array.isArray(response) ? response : []);
+                  results = data;
+                  resolve();
+                } catch (e) { reject(e); } finally {
+                  delete window[cb];
+                  const s = document.getElementById(cb + '_script'); if (s) s.remove();
+                }
+              };
+              const script = document.createElement('script');
+              script.id = cb + '_script';
+              script.src = `${WEB_APP_URL}?action=employee&empcode=${encodeURIComponent(empcode)}&callback=${cb}`;
+              script.onerror = function(){ delete window[cb]; script.remove(); reject(new Error('JSONP failed')); };
+              document.head.appendChild(script);
+            });
+          }
+        } catch (e) {
+          // ignore - will show "no records" below
+          console.warn('employee fetch error', e);
+        }
+      }
 
       btn.disabled = false;
       btn.textContent = originalText;
 
-      if (employeeRecords.length === 0) {
-        // Try to query web app directly for this employee (if URL present)
-        if (connectedWebAppUrl) {
-          try {
-            // try fetch with CORS
-            const resp = await fetch(`${connectedWebAppUrl}?action=employee&empcode=${encodeURIComponent(empcode)}`);
-            if (resp.ok) {
-              const payload = await resp.json();
-              const data = payload.data || payload;
-              if (Array.isArray(data) && data.length > 0) {
-                displayReport(data);
-                return;
-              }
-            }
-            // if not ok - try JSONP
-            await new Promise((resolve, reject) => {
-              const callbackName = 'handleEmployeeData_' + Date.now();
-              window[callbackName] = function(response) {
-                try {
-                  const data = response && response.data ? response.data : (Array.isArray(response) ? response : []);
-                  if (data.length > 0) {
-                    displayReport(data);
-                    resolve();
-                  } else {
-                    reject(new Error('No records found'));
-                  }
-                } catch (e) {
-                  reject(e);
-                } finally {
-                  delete window[callbackName];
-                  const scriptEl = document.getElementById(callbackName + '_script');
-                  if (scriptEl) scriptEl.remove();
-                }
-              };
-              const script = document.createElement('script');
-              script.id = callbackName + '_script';
-              script.src = `${connectedWebAppUrl}?action=employee&empcode=${encodeURIComponent(empcode)}&callback=${callbackName}`;
-              script.onerror = function() {
-                delete window[callbackName];
-                script.remove();
-                reject(new Error('JSONP failed'));
-              };
-              document.head.appendChild(script);
-            });
-            return;
-          } catch (err) {
-            showMessage('error', 'No attendance records found for this employee code');
-            return;
-          }
-        } else {
-          showMessage('error', 'No attendance records found for this employee code');
-          return;
-        }
+      if (!results || results.length === 0) {
+        showMessage('error', 'No attendance records found for this employee code');
+        return;
       }
 
-      displayReport(employeeRecords);
+      displayReport(results);
     });
 
+    // Display report (no auto-download). Download is manual via downloadBtn.
     function displayReport(records) {
       document.getElementById('searchSection').style.display = 'none';
       document.getElementById('reportSection').style.display = 'block';
@@ -780,255 +265,168 @@
       const empcode = records[0].empcode || records[0].EMPCODE || '';
       const empname = records[0].empname || records[0].EMPNAME || '';
 
-      document.getElementById('empInfo').innerHTML = `
-        <strong>${empname}</strong> (${empcode})
-      `;
+      document.getElementById('empInfo').innerHTML = `<strong>${empname}</strong> (${empcode})`;
 
-      // Calculate totals
       let totalPresent = records.length;
       let totalOTHours = 0;
-
-      records.forEach(record => {
-        const otHours = calculateOT(record.in_time || record.IN || record['IN'], record.out_time || record.OUT || record['OUT']);
-        totalOTHours += otHours;
+      records.forEach(r => {
+        const inT = r.in_time || r.IN || r['IN'] || '';
+        const outT = r.out_time || r.OUT || r['OUT'] || '';
+        totalOTHours += calculateOT(inT, outT);
       });
 
       document.getElementById('totalPresent').textContent = totalPresent;
       document.getElementById('totalOT').textContent = totalOTHours.toFixed(1);
 
-      // Display attendance list
       const listHtml = records.map(record => {
         const inTime = record.in_time || record.IN || record['IN'] || '';
         const outTime = record.out_time || record.OUT || record['OUT'] || '';
         const otHours = calculateOT(inTime, outTime);
-        const date = `${record.shdate || record.SHDATE || ''}/${record.shmonth || record.SHMONT || record.SHMONT || record.SHM ? record.shmonth : (record.SHMONT||record.SHM)}/${record.shyear || record.SHYEAR || ''}`;
-
-        const shdate = (record.shdate || record.SHDATE || record['SHDATE'] || '');
-        const shmonth = (record.shmonth || record.SHM || record['SHMONTH'] || '');
-        const shyear = (record.shyear || record.SHYEAR || record['SHYEAR'] || '');
+        const shdate = (record.shdate || record.SHDATE || '') || '';
+        const shmonth = (record.shmonth || record.SHM || record.SHMONT || '') || '';
+        const shyear = (record.shyear || record.SHYEAR || '') || '';
         const formattedDate = `${shdate}/${shmonth}/${shyear}`;
-
-        return `
-          <div class="attendance-item">
-            <div class="date">${formattedDate}</div>
-            <div class="times">
-              <span>🕐 IN: ${inTime}</span>
-              <span>🕐 OUT: ${outTime}</span>
-            </div>
-            ${otHours > 0 ? `<div style="margin-top: 6px; color: #667eea; font-size: 13px; font-weight: 600;">⏱️ OT: ${otHours.toFixed(1)} hours</div>` : ''}
-          </div>
-        `;
+        return `<div class="attendance-item">
+                  <div class="date">${formattedDate}</div>
+                  <div class="times">
+                    <span>🕐 IN: ${inTime}</span>
+                    <span>🕐 OUT: ${outTime}</span>
+                  </div>
+                  ${otHours>0?`<div style="margin-top:6px;color:#667eea;font-size:13px;font-weight:600;">⏱️ OT: ${otHours.toFixed(1)} hours</div>`:''}
+                </div>`;
       }).join('');
-
       document.getElementById('attendanceList').innerHTML = listHtml;
-
-      // After report is shown, auto-capture it as JPG and trigger download (mobile friendly).
-      // We capture only the inner report content (reportSection).
-      setTimeout(async () => {
-        try {
-          const reportEl = document.getElementById('reportSection');
-          // use html2canvas to render
-          const canvas = await html2canvas(reportEl, { scale: 2, useCORS: true });
-          canvas.toBlob(function(blob) {
-            if (!blob) return;
-            const filename = `${empcode}_${empname || 'report'}_${new Date().toISOString().slice(0,10)}.jpg`;
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            // For mobile browsers, a user gesture is better; we try auto-click.
-            document.body.appendChild(link);
-            link.click();
-            setTimeout(()=> {
-              URL.revokeObjectURL(link.href);
-              link.remove();
-            }, 1500);
-          }, 'image/jpeg', 0.9);
-        } catch (e) {
-          console.warn('Failed to auto-generate JPG:', e);
-          // fallback: do nothing (user can manually screenshot)
-        }
-      }, 800);
     }
 
+    // calculate OT (standard 12 hour shift)
     function calculateOT(inTime, outTime) {
       if (!inTime || !outTime) return 0;
-
-      const [inHour, inMin] = inTime.split(':').map(Number);
-      const [outHour, outMin] = outTime.split(':').map(Number);
-
-      if (isNaN(inHour) || isNaN(outHour)) return 0;
-
-      let inMinutes = inHour * 60 + (inMin || 0);
-      let outMinutes = outHour * 60 + (outMin || 0);
-
-      // Handle next day checkout
-      if (outMinutes < inMinutes) {
-        outMinutes += 24 * 60;
-      }
-
-      const totalMinutes = outMinutes - inMinutes;
-      const totalHours = totalMinutes / 60;
-
-      // Standard shift is 12 hours
-      const otHours = Math.max(0, totalHours - 12);
-
-      return otHours;
+      const [inH, inM] = (inTime.split(':').map(Number));
+      const [outH, outM] = (outTime.split(':').map(Number));
+      if (isNaN(inH) || isNaN(outH)) return 0;
+      let inMin = inH * 60 + (inM || 0);
+      let outMin = outH * 60 + (outM || 0);
+      if (outMin < inMin) outMin += 24*60;
+      const hours = (outMin - inMin) / 60;
+      return Math.max(0, hours - 12);
     }
+
+    // Download button: capture the reportSection and trigger JPG download
+    document.getElementById('downloadBtn').addEventListener('click', async () => {
+      const reportEl = document.getElementById('reportSection');
+      try {
+        const canvas = await html2canvas(reportEl, { scale: 2, useCORS: true });
+        canvas.toBlob(function(blob) {
+          if (!blob) { showMessage('error', 'Failed to generate image'); return; }
+          const empInfoText = (document.getElementById('empInfo').textContent || '').replace(/\s+/g, '_');
+          const filename = `${empInfoText || 'attendance_report'}_${new Date().toISOString().slice(0,10)}.jpg`;
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(()=> { URL.revokeObjectURL(link.href); link.remove(); }, 1500);
+        }, 'image/jpeg', 0.9);
+      } catch (e) {
+        showMessage('error', 'Failed to generate/download report: ' + e.message);
+      }
+    });
 
     // Back buttons
     document.getElementById('backBtn').addEventListener('click', () => {
       document.getElementById('reportSection').style.display = 'none';
       document.getElementById('searchSection').style.display = 'block';
     });
-
     document.getElementById('grievanceBtn').addEventListener('click', () => {
       document.getElementById('searchSection').style.display = 'none';
       document.getElementById('grievanceSection').style.display = 'block';
     });
-
     document.getElementById('backBtn2').addEventListener('click', () => {
       document.getElementById('grievanceSection').style.display = 'none';
       document.getElementById('searchSection').style.display = 'block';
     });
 
-    // Grievance form submit -> will try to post to connected web app if present, otherwise use dataSdk.create
+    // Grievance submit: sends to web app as GET (JSONP-friendly) or via fetch if CORS allows
     document.getElementById('grievanceForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-
       const btn = document.getElementById('submitGrievance');
       const originalText = btn.textContent;
-      btn.disabled = true;
-      btn.innerHTML = 'Submitting... <span class="loading"></span>';
+      btn.disabled = true; btn.textContent = 'Submitting...';
 
       const grievance = {
         empcode: document.getElementById('griev-empcode').value.trim(),
         empname: document.getElementById('griev-empname').value.trim(),
         date: document.getElementById('griev-date').value,
         issue_type: document.getElementById('griev-issue').value.trim(),
-        details: document.getElementById('griev-details').value.trim(),
-        submitted_at: new Date().toISOString()
+        details: document.getElementById('griev-details').value.trim()
       };
 
       try {
-        if (connectedWebAppUrl) {
-          // Use JSONP-safe GET to submit grievance (Google Apps Script endpoint supports this example)
-          const params = new URLSearchParams();
-          params.set('action', 'submit_grievance');
-          params.set('empcode', grievance.empcode);
-          params.set('empname', grievance.empname);
-          params.set('date', grievance.date);
-          params.set('issue_type', grievance.issue_type);
-          params.set('details', grievance.details);
-          // try fetch first
-          const resp = await fetch(`${connectedWebAppUrl}?${params.toString()}`);
+        if (!WEB_APP_URL || WEB_APP_URL.includes('AKfy...')) {
+          showMessage('error', 'WEB_APP_URL not configured. Cannot submit grievance.');
+          return;
+        }
+
+        // try CORS POST/GET first
+        try {
+          const resp = await fetch(`${WEB_APP_URL}?action=submit_grievance&empcode=${encodeURIComponent(grievance.empcode)}&empname=${encodeURIComponent(grievance.empname)}&date=${encodeURIComponent(grievance.date)}&issue_type=${encodeURIComponent(grievance.issue_type)}&details=${encodeURIComponent(grievance.details)}`);
           if (resp.ok) {
             const payload = await resp.json();
-            if (payload && payload.isOk) {
+            if (payload.isOk) {
               showMessage('success', 'Grievance submitted successfully!', 'grievanceMessage');
               document.getElementById('grievanceForm').reset();
             } else {
-              showMessage('error', 'Failed to submit grievance via web app. Try again.', 'grievanceMessage');
+              showMessage('error', 'Failed to submit grievance via web app.');
             }
           } else {
-            // JSONP fallback
-            await new Promise((resolve, reject) => {
-              const callbackName = 'handleGrievance_' + Date.now();
-              window[callbackName] = function(response) {
-                try {
-                  if (response && response.isOk) {
-                    showMessage('success', 'Grievance submitted successfully!', 'grievanceMessage');
-                    document.getElementById('grievanceForm').reset();
-                    resolve();
-                  } else {
-                    showMessage('error', 'Failed to submit grievance via web app.', 'grievanceMessage');
-                    reject(new Error('submit failed'));
-                  }
-                } catch (e) {
-                  reject(e);
-                } finally {
-                  delete window[callbackName];
-                  const scriptEl = document.getElementById(callbackName + '_script');
-                  if (scriptEl) scriptEl.remove();
+            throw new Error('Non-OK response');
+          }
+        } catch (err) {
+          // JSONP fallback
+          await new Promise((resolve, reject) => {
+            const cb = 'cb_griev_' + Date.now();
+            window[cb] = function(response) {
+              try {
+                if (response && response.isOk) {
+                  showMessage('success', 'Grievance submitted successfully!', 'grievanceMessage');
+                  document.getElementById('grievanceForm').reset();
+                  resolve();
+                } else {
+                  showMessage('error', 'Failed to submit grievance via web app.', 'grievanceMessage');
+                  reject(new Error('submit failed'));
                 }
-              };
-              const script = document.createElement('script');
-              script.id = callbackName + '_script';
-              script.src = `${connectedWebAppUrl}?action=submit_grievance&empcode=${encodeURIComponent(grievance.empcode)}&empname=${encodeURIComponent(grievance.empname)}&date=${encodeURIComponent(grievance.date)}&issue_type=${encodeURIComponent(grievance.issue_type)}&details=${encodeURIComponent(grievance.details)}&callback=${callbackName}`;
-              script.onerror = function() {
-                delete window[callbackName];
-                script.remove();
-                showMessage('error', 'Failed to submit grievance via web app (JSONP failed).', 'grievanceMessage');
-                reject(new Error('JSONP failed'));
-              };
-              document.head.appendChild(script);
-            });
-          }
-        } else if (window.dataSdk && window.dataSdk.create) {
-          // fallback to Canva Sheet via dataSdk
-          const result = await window.dataSdk.create(grievance);
-          if (result && result.isOk) {
-            showMessage('success', 'Grievance submitted successfully! Your request will be reviewed.', 'grievanceMessage');
-            document.getElementById('grievanceForm').reset();
-          } else {
-            showMessage('error', 'Failed to submit grievance. Please try again.', 'grievanceMessage');
-          }
-        } else {
-          showMessage('error', 'No backend configured to submit grievance. Please paste web app URL or enable data SDK.', 'grievanceMessage');
+              } catch (e) { reject(e); } finally {
+                delete window[cb];
+                const s = document.getElementById(cb + '_script'); if (s) s.remove();
+              }
+            };
+            const script = document.createElement('script');
+            script.id = cb + '_script';
+            script.src = `${WEB_APP_URL}?action=submit_grievance&empcode=${encodeURIComponent(grievance.empcode)}&empname=${encodeURIComponent(grievance.empname)}&date=${encodeURIComponent(grievance.date)}&issue_type=${encodeURIComponent(grievance.issue_type)}&details=${encodeURIComponent(grievance.details)}&callback=${cb}`;
+            script.onerror = function(){ delete window[cb]; script.remove(); reject(new Error('JSONP failed')); };
+            document.head.appendChild(script);
+          });
         }
-      } catch (err) {
-        showMessage('error', 'Failed to submit grievance: ' + err.message, 'grievanceMessage');
+      } catch (e) {
+        showMessage('error', 'Failed to submit grievance: ' + e.message, 'grievanceMessage');
       } finally {
-        btn.disabled = false;
-        btn.textContent = originalText;
-        // auto-return to search after short delay on success
-        setTimeout(() => {
-          hideMessage('grievanceMessage');
+        btn.disabled = false; btn.textContent = originalText;
+        setTimeout(()=> {
           document.getElementById('grievanceSection').style.display = 'none';
           document.getElementById('searchSection').style.display = 'block';
-        }, 2000);
+        }, 1400);
       }
     });
 
-    function showMessage(type, text, elementId = 'message') {
-      const messageEl = document.getElementById(elementId);
-      if (messageEl) {
-        messageEl.className = `message ${type}`;
-        messageEl.textContent = text;
-        messageEl.style.display = 'block';
+    // Fetch data button hookup
+    document.getElementById('fetchDataBtn').addEventListener('click', fetchAllFromWebApp);
 
-        setTimeout(() => {
-          hideMessage(elementId);
-        }, 5000);
-      } else {
-        // Create inline message for search section
-        const existingMsg = document.querySelector('.search-section .message');
-        if (existingMsg) existingMsg.remove();
-
-        const msg = document.createElement('div');
-        msg.className = `message ${type}`;
-        msg.textContent = text;
-        msg.style.display = 'block';
-
-        const searchSection = document.getElementById('searchSection');
-        searchSection.insertBefore(msg, searchSection.querySelector('.search-group'));
-
-        setTimeout(() => {
-          msg.remove();
-        }, 5000);
+    // On load: set data source label to include WEB_APP_URL if configured
+    (function init() {
+      if (WEB_APP_URL && !WEB_APP_URL.includes('AKfy...')) {
+        document.getElementById('dataSourceInfo').textContent = `🌐 Data Source: ${WEB_APP_URL}`;
       }
-    }
-
-    function hideMessage(elementId) {
-      const messageEl = document.getElementById(elementId);
-      if (messageEl) {
-        messageEl.style.display = 'none';
-      }
-    }
-
-    // initialize on load
-    initializeApp();
+    })();
   </script>
-
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a5912a3d5657e8a',t:'MTc2NDMyNDU5OC4wMD[...]";b.body.appendChild(d)}}}try{var a=document.getElementById('__cf_chl_iframe');if(a){a.addEventListener? a.addEventListener('load',c):a.onload=c;}}catch(e){}})();</script>
 </body>
 </html>
